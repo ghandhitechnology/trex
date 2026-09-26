@@ -14,6 +14,7 @@ use crate::meta::hub::{Hub, HubAction};
 use crate::meta::save::{self, Save};
 use crate::meta::{self, Reward, RunResult, Toasts};
 use crate::render::canvas::Canvas;
+use crate::render::sprite::bank;
 use crate::render::{arena, palette, scene};
 use crate::ui;
 use world::World;
@@ -234,7 +235,10 @@ impl Game {
                 w.step(&c);
                 if w.player.hp <= 0 {
                     let pos = w.player.pos;
-                    w.fx.burst(pos, &[palette::LIME, palette::LEAF, palette::BONE, palette::RED], 40, 140.0);
+                    let hero = bank().get(content::get().characters[w.character].sprite_id);
+                    let mut colors: Vec<_> = hero.colors.iter().take(2).map(|&c| palette::color(c)).collect();
+                    colors.extend([palette::BONE, palette::RED]);
+                    w.fx.burst(pos, &colors, 40, 140.0);
                     w.fx.shake(0.9);
                     self.scene = Scene::Dying(DEATH_TIME);
                 } else if w.pending_levels > 0 {
