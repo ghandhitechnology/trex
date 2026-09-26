@@ -105,14 +105,19 @@ pub fn parse(text: &str) -> Result<Save, String> {
     Ok(save)
 }
 
-/// Missing file → fresh save. Unreadable file → moved aside to `.bad`, fresh save.
+/// Missing file → fresh save. Corrupt file → moved aside to `.bad`, fresh
+/// save. A file we cannot read (permissions, I/O) is left alone, and the fresh
+/// save never overwrites it.
 pub fn load(path: &Path) -> Save {
+    let corrupt = || {
+        let _ = fs::rename(path, path.with_extension("ron.bad"));
+        Save::default()
+    };
     match fs::read_to_string(path) {
-        Ok(text) => parse(&text).unwrap_or_else(|_| {
-            let _ = fs::rename(path, path.with_extension("ron.bad"));
-            Save::default()
-        }),
-        Err(_) => Save::default(),
+        Ok(text) => parse(&text).unwrap_or_else(|_| corrupt()),
+        Err(e) if e.kind() == io::ErrorKind::NotFound => Save::default(),
+        Err(e) if e.kind() == io::ErrorKind::InvalidData => corrupt(),
+        Err(_) => Save { read_only: true, ..Save::default() },
     }
 }
 
@@ -126,7 +131,8 @@ pub fn store(path: &Path, save: &Save) -> io::Result<()> {
     }
     let text =
         ron::ser::to_string_pretty(save, ron::ser::PrettyConfig::default()).map_err(io::Error::other)?;
-    let tmp = path.with_extension("ron.tmp");
+    // Per process, so two games saving at once never share a temp file.
+    let tmp = path.with_extension(format!("ron.{}.tmp", std::process::id()));
     fs::write(&tmp, text)?;
     fs::rename(tmp, path)
 }

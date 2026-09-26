@@ -43,11 +43,11 @@ pub fn base_bones(r: &RunResult) -> u32 {
 
 pub fn record_run(save: &mut Save, content: &Content, r: &RunResult) -> Reward {
     let bones = (base_bones(r) as f32 * (1.0 + bone_bonus(save, content))).round() as u32;
-    save.bones += bones;
-    save.runs += 1;
+    save.bones = save.bones.saturating_add(bones);
+    save.runs = save.runs.saturating_add(1);
     let rec = &mut save.records;
-    rec.total_bones += u64::from(bones);
-    rec.total_kills += u64::from(r.kills);
+    rec.total_bones = rec.total_bones.saturating_add(u64::from(bones));
+    rec.total_kills = rec.total_kills.saturating_add(u64::from(r.kills));
     rec.kills = rec.kills.max(r.kills);
     rec.level = rec.level.max(r.level);
     rec.items = rec.items.max(r.build.items.len() as u32);
@@ -114,9 +114,7 @@ pub fn goal_value(goal: &Goal, save: &Save, content: &Content) -> f32 {
         Goal::Heroes(_) => {
             (0..content.characters.len()).filter(|&i| hero_unlocked(save, content, i)).count() as f32
         }
-        Goal::Upgrades(_) => {
-            content.meta.upgrades.iter().map(|u| upgrade_level(save, &u.id)).sum::<u32>() as f32
-        }
+        Goal::Upgrades(_) => content.meta.upgrades.iter().map(|u| upgrade_level(save, &u.id) as f32).sum(),
     }
 }
 
@@ -133,8 +131,8 @@ pub fn check_feats(save: &mut Save, content: &Content) -> Vec<usize> {
             save.feats.insert(f.id.clone());
             match &f.reward {
                 FeatReward::Bones(n) => {
-                    save.bones += n;
-                    save.records.total_bones += u64::from(*n);
+                    save.bones = save.bones.saturating_add(*n);
+                    save.records.total_bones = save.records.total_bones.saturating_add(u64::from(*n));
                 }
                 FeatReward::Unlock(id) => {
                     save.unlocked.insert(id.clone());
