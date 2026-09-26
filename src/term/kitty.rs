@@ -448,6 +448,12 @@ impl Presenter {
         self.tmux
     }
 
+    /// The terminal is known to show what we send, so an unchanged frame can
+    /// be skipped. Until then every frame goes out so a dead medium falls back.
+    pub fn settled(&self) -> bool {
+        self.medium == Medium::Direct || self.confirmed || self.forced
+    }
+
     fn shm_name(&self, i: usize) -> CString {
         CString::new(format!("/trex-{}-{i}", self.pid)).expect("no nul in shm name")
     }
@@ -530,7 +536,7 @@ impl Presenter {
     }
 
     /// Queue the escapes that replace the image with `cv`, scaled by `k`,
-    /// fit to `cols` x `rows` cells.
+    /// fit to `cols` x `rows` cells. False when the frame was dropped.
     pub fn present(
         &mut self,
         out: &mut Vec<u8>,
@@ -538,7 +544,7 @@ impl Presenter {
         k: usize,
         cols: u16,
         rows: u16,
-    ) -> io::Result<()> {
+    ) -> io::Result<bool> {
         cv.scaled_rgb(k, &mut self.rgb);
         let (w, h) = (cv.w as usize * k, cv.h as usize * k);
         let (cols, rows) = (cols.min(MAX_CELLS), rows.min(MAX_CELLS));
@@ -553,7 +559,7 @@ impl Presenter {
             }
             let i = self.next;
             if self.slots[i].is_some() {
-                return Ok(()); // Terminal is behind; drop this frame.
+                return Ok(false); // Terminal is behind; drop this frame.
             }
             let name = match self.write_slot(i) {
                 Ok(name) => name,
@@ -569,14 +575,14 @@ impl Presenter {
             let t = if self.medium == Medium::Shm { 's' } else { 't' };
             let control = format!("{base},t={t},S={}", self.rgb.len());
             command(out, &control, B64.encode(name).as_bytes(), self.tmux);
-            return Ok(());
+            return Ok(true);
         }
 
         let mut z = ZlibEncoder::new(Vec::with_capacity(self.rgb.len() / 8), Compression::fast());
         z.write_all(&self.rgb)?;
         let data = B64.encode(z.finish()?);
         direct_chunks(out, &format!("{base},t=d,o=z"), data.as_bytes(), self.tmux);
-        Ok(())
+        Ok(true)
     }
 }
 

@@ -13,6 +13,7 @@ use crate::engine::DT;
 use crate::game::{Game, Scene, Signal};
 use crate::meta::save;
 use crate::render::canvas::Canvas;
+use crate::render::palette::Color;
 use crate::term::input::Input;
 use crate::term::kitty::{self, MAX_CELLS, Medium, Presenter};
 use crate::term::{self, PaneSize, Session};
@@ -23,6 +24,9 @@ const TARGET_AREA: f32 = 256.0 * 144.0;
 pub const PIXEL_BUDGET: f32 = 600_000.0;
 /// Most sim ticks run in one loop pass before we drop time.
 const MAX_CATCHUP: u32 = 5;
+/// Timer jitter tolerated when pacing frames, so a late wake followed by an
+/// on-time one does not skip a frame.
+const FRAME_SLACK: Duration = Duration::from_millis(2);
 
 /// How the pane maps to the framebuffer.
 struct Layout {
@@ -80,6 +84,12 @@ fn frame_interval(game: &Game, focused: bool, medium: Medium) -> Duration {
         _ => 30.0,
     };
     Duration::from_secs_f32(1.0 / fps)
+}
+
+/// Paused or unfocused outside a run: nothing moves on its own, so the loop
+/// wakes only for frames and input instead of every tick.
+fn idle(game: &Game, focused: bool) -> bool {
+    !game.is_live() && (!focused || matches!(game.scene, Scene::Paused))
 }
 
 pub fn run() -> io::Result<()> {
@@ -142,6 +152,8 @@ fn play(game: &mut Game, presenter: &mut Presenter, mut layout: Layout, stop: &A
     let mut next_tick = Instant::now();
     let mut last_frame = Instant::now() - Duration::from_secs(1);
     let mut dirty = true;
+    // Last frame the terminal was sent; an identical frame is skipped.
+    let mut shown: Vec<Color> = Vec::new();
 
     while !stop.load(Ordering::Relaxed) {
         let mut resized = false;
@@ -167,12 +179,16 @@ fn play(game: &mut Game, presenter: &mut Presenter, mut layout: Layout, stop: &A
             canvas.resize(layout.lw, layout.lh);
             game.set_view((layout.lw, layout.lh));
             out.extend_from_slice(b"\x1b[2J");
+            shown.clear();
             kitty::placeholders(&mut out, presenter.id, layout.cols, layout.rows);
             dirty = true;
         }
 
+        let interval = frame_interval(game, focused, presenter.medium);
+        // Idle wakes are a frame apart, so catch up a whole frame of ticks.
+        let max_steps = MAX_CATCHUP.max((interval.as_secs_f32() / DT).ceil() as u32);
         let mut steps = 0;
-        while next_tick <= now && steps < MAX_CATCHUP {
+        while next_tick <= now && steps < max_steps {
             let c = input.controls(now);
             if game.update(&c) == Signal::Quit {
                 return Ok(());
@@ -180,15 +196,17 @@ fn play(game: &mut Game, presenter: &mut Presenter, mut layout: Layout, stop: &A
             next_tick += Duration::from_secs_f32(DT);
             steps += 1;
         }
-        if steps == MAX_CATCHUP && next_tick < now {
+        if steps == max_steps && next_tick < now {
             next_tick = now;
         }
 
-        if (steps > 0 || dirty)
-            && now.duration_since(last_frame) >= frame_interval(game, focused, presenter.medium)
-        {
+        if (steps > 0 || dirty) && now.duration_since(last_frame) + FRAME_SLACK >= interval {
             game.render(&mut canvas);
-            presenter.present(&mut out, &canvas, layout.scale(presenter.medium), layout.cols, layout.rows)?;
+            let changed = canvas.px != shown || !presenter.settled();
+            let k = layout.scale(presenter.medium);
+            if changed && presenter.present(&mut out, &canvas, k, layout.cols, layout.rows)? {
+                shown.clone_from(&canvas.px);
+            }
             last_frame = now;
             dirty = false;
         }
@@ -198,7 +216,8 @@ fn play(game: &mut Game, presenter: &mut Presenter, mut layout: Layout, stop: &A
             out.clear();
         }
 
-        match events.recv_timeout(next_tick.saturating_duration_since(Instant::now())) {
+        let wake = if idle(game, focused) { next_tick.max(last_frame + interval) } else { next_tick };
+        match events.recv_timeout(wake.saturating_duration_since(Instant::now())) {
             Ok(ev) => woke = Some(ev),
             Err(RecvTimeoutError::Timeout) => {}
             // The reader failed: the terminal is gone.
