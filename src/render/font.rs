@@ -138,6 +138,12 @@ pub fn draw_title(cv: &mut Canvas, cx: i32, y: i32, s: &str, st: TitleStyle, lif
     draw_with(cv, x, y, s, k, |i, row| (if row < 3 { st.top } else { st.bottom }, lift(i)));
 }
 
+/// A `draw_title` lift: letters fall into place one after another as a
+/// banner `age` seconds old appears.
+pub fn drop_in(age: f32, letter: usize) -> i32 {
+    -(((0.2 + letter as f32 * 0.03) - age).max(0.0) * 50.0) as i32
+}
+
 /// Text with a 1px outline on all eight sides, readable over any background.
 pub fn draw_outlined(cv: &mut Canvas, x: i32, y: i32, s: &str, c: Color, outline: Color) {
     for (dx, dy) in [(-1, -1), (0, -1), (1, -1), (-1, 0), (1, 0), (-1, 1), (0, 1), (1, 1)] {

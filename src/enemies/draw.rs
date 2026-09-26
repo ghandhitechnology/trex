@@ -7,7 +7,7 @@ use super::{AiState, Behavior, Enemy};
 use crate::content;
 use crate::game::world::World;
 use crate::render::canvas::{Blit, Canvas};
-use crate::render::font;
+use crate::render::font::{self, TitleStyle};
 use crate::render::palette::{self, CLEAR, Color, INK};
 use crate::render::sprite::{Frame, bank};
 
@@ -317,7 +317,8 @@ pub fn over(cv: &mut Canvas, w: &World) {
         let visible = shown > 0.1 && (b.time > 0.5 || blinking(b.time, 10.0));
         if visible {
             let y = (cv.h as f32 * 0.24) as i32;
-            font::draw_big_centered(cv, cv.w / 2, y, &b.text, b.color, INK, 2);
+            let st = TitleStyle { top: b.colors.0, bottom: b.colors.1, outline: INK, k: 2 };
+            font::draw_title(cv, cv.w / 2, y, &b.text, st, |i| font::drop_in(shown, i));
         }
     }
 }

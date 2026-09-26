@@ -194,12 +194,21 @@ const BANNER_TIME: f32 = 2.6;
 #[derive(Clone, Debug)]
 pub struct Banner {
     pub text: String,
-    pub color: Color,
+    /// Title colors: upper and lower glyph rows.
+    pub colors: (Color, Color),
     pub time: f32,
 }
 
 impl Banner {
     pub const TIME: f32 = BANNER_TIME;
+
+    fn stage(name: &str) -> Self {
+        Banner { text: name.to_string(), colors: (palette::CREAM, palette::AMBER), time: BANNER_TIME }
+    }
+
+    fn boss(name: &str) -> Self {
+        Banner { text: name.to_string(), colors: (palette::RED, palette::BLOOD), time: BANNER_TIME }
+    }
 }
 
 #[derive(Default)]
@@ -240,11 +249,7 @@ impl Director {
             stage,
             prev_stage: stage,
             stage_age: 0.0,
-            banner: Some(Banner {
-                text: waves.stages[stage].name.clone(),
-                color: palette::CREAM,
-                time: BANNER_TIME,
-            }),
+            banner: Some(Banner::stage(&waves.stages[stage].name)),
         }
     }
 
@@ -268,8 +273,7 @@ pub fn update(w: &mut World, dt: f32) {
         d.prev_stage = d.stage;
         d.stage = stage;
         d.stage_age = 0.0;
-        d.banner =
-            Some(Banner { text: waves.stages[stage].name.clone(), color: palette::CREAM, time: BANNER_TIME });
+        d.banner = Some(Banner::stage(&waves.stages[stage].name));
     }
     if let Some(b) = &mut d.banner {
         b.time -= dt;
@@ -283,7 +287,7 @@ pub fn update(w: &mut World, dt: f32) {
         let kind = waves.boss_kinds[d.bosses_sent % waves.boss_kinds.len()];
         d.bosses_sent += 1;
         d.next_boss += waves.bosses.every;
-        d.banner = Some(Banner { text: enemies[kind].name.clone(), color: palette::RED, time: BANNER_TIME });
+        d.banner = Some(Banner::boss(&enemies[kind].name));
         let pos = spawn_point(w, 20.0);
         d.pending.push(Pending { kind, pos, timer: BOSS_WARN, elite: None, hp_scale: 1.0 });
     }

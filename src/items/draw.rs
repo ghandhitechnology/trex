@@ -7,7 +7,7 @@ use super::{Build, On};
 use crate::content::{self, Content};
 use crate::game::world::World;
 use crate::render::canvas::{Blit, Canvas};
-use crate::render::font;
+use crate::render::font::{self, TitleStyle};
 use crate::render::palette::{self, Color, INK};
 use crate::render::sprite::{SpriteId, bank};
 
@@ -158,8 +158,9 @@ pub fn hud(cv: &mut Canvas, w: &World, clock: f32) {
         };
         let top = base - drop;
         font::draw_centered(cv, cx, top, "COMBO", palette::PINK, INK);
-        let color = if (age * 8.0) as i32 % 2 == 0 && age < 0.6 { palette::CREAM } else { palette::GOLD };
-        font::draw_big_centered(cv, cx, top + 8, &s.name, color, INK, 2);
+        let top_color = if (age * 8.0) as i32 % 2 == 0 && age < 0.6 { palette::CREAM } else { palette::GOLD };
+        let st = TitleStyle { top: top_color, bottom: palette::AMBER, outline: INK, k: 2 };
+        font::draw_title(cv, cx, top + 8, &s.name, st, |i| font::drop_in(age, i));
         font::draw_centered(cv, cx, top + 22, &s.desc, palette::BONE, INK);
     }
 }

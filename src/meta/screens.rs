@@ -46,9 +46,7 @@ fn blit_big(cv: &mut Canvas, f: &Frame, x: i32, y: i32, k: i32, tint: Option<Col
 }
 
 fn panel(cv: &mut Canvas, x: i32, y: i32, w: i32, h: i32, border: Color) {
-    cv.fill_rect(x + 1, y + 2, w, h, INK);
-    cv.fill_rect(x, y, w, h, palette::NIGHT);
-    cv.rect(x, y, w, h, border);
+    crate::ui::screens::panel(cv, x, y, w, h, palette::NIGHT, border);
 }
 
 /// Bone icon plus a number; returns the drawn width.
@@ -302,11 +300,14 @@ fn shop(cv: &mut Canvas, h: &Hub, save: &Save, content: &Content, clock: f32) {
         }
     }
     let lock = bank.named("lock").first();
+    let (mut more, mut last_bottom) = (false, TOP);
     for (i, (&b, &(r, c))) in entries.iter().zip(&cells).enumerate() {
         let (x, y) = (gx + c as i32 * (CELL + GAP), row_y[r] - scroll);
         if y < TOP || y + CELL > area_bottom + 6 {
+            more |= y >= TOP;
             continue;
         }
+        last_bottom = last_bottom.max(y + CELL);
         let is_sel = i == sel;
         let price = super::price(save, content, b);
         let border = match (is_sel, h.on_tabs) {
@@ -338,6 +339,14 @@ fn shop(cv: &mut Canvas, h: &Hub, save: &Save, content: &Content, clock: f32) {
             }
             _ if dim => cv.blit(lock, x + CELL - lock.w + 1, y + CELL - lock.h + 1, Blit::default()),
             _ => {}
+        }
+    }
+
+    // A chevron under the grid while more rows wait below.
+    if more && blink(clock, 1.5) {
+        let (ax, ay) = (cv.w / 2, last_bottom + 5);
+        for k in 0..3 {
+            cv.hline(ax - 2 + k, ax + 2 - k, ay + k, palette::HAZE);
         }
     }
 

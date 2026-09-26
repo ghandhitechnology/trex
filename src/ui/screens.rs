@@ -28,7 +28,7 @@ fn pulse(a: Color, b: Color, clock: f32, hz: f32) -> Color {
 }
 
 /// A framed box with a drop shadow and a lit top edge.
-fn panel(cv: &mut Canvas, x: i32, y: i32, w: i32, h: i32, body: Color, border: Color) {
+pub fn panel(cv: &mut Canvas, x: i32, y: i32, w: i32, h: i32, body: Color, border: Color) {
     cv.fill_rect(x + 1, y + 2, w, h, INK);
     cv.fill_rect(x, y, w, h, body);
     cv.rect(x, y, w, h, border);
@@ -118,15 +118,27 @@ fn wavy_logo(cv: &mut Canvas, f: &crate::render::sprite::Frame, x: i32, y: i32, 
 }
 
 pub fn paused(cv: &mut Canvas, w: &World, clock: f32) {
+    const PITCH: i32 = 18;
     let content = content::get();
     let bank = bank();
     cv.wash(INK, 140);
     let (cx, cy) = (cv.w / 2, cv.h / 2);
     let items = &w.build.items;
-    let per_row = ((cv.w - 40) / 14).max(1) as usize;
+    let per_row = ((cv.w - 24) / PITCH).max(1) as usize;
     let rows = items.len().div_ceil(per_row) as i32;
-    let pw = 120.max(items.len().min(per_row) as i32 * 14 + 16);
-    let ph = 44 + rows * 14;
+    let pw = 120.max(items.len().min(per_row) as i32 * PITCH + 12);
+    // Active combos, comma separated, never splitting a name across lines.
+    let mut combo_lines: Vec<String> = Vec::new();
+    for k in w.build.synergies(content) {
+        let name = &content.synergies[k].name;
+        match combo_lines.last_mut() {
+            Some(line) if font::width(&format!("{line}, {name}")) <= pw - 12 => {
+                *line = format!("{line}, {name}")
+            }
+            _ => combo_lines.push(name.clone()),
+        }
+    }
+    let ph = 44 + rows * PITCH + combo_lines.len() as i32 * font::LINE_H;
     let (px, py) = (cx - pw / 2, cy - ph / 2);
     panel(cv, px, py, pw, ph, palette::NIGHT, palette::SLATE);
     let st = TitleStyle { top: palette::BONE, bottom: palette::FOG, outline: INK, k: 2 };
@@ -134,17 +146,22 @@ pub fn paused(cv: &mut Canvas, w: &World, clock: f32) {
 
     for (row, chunk) in items.chunks(per_row).enumerate() {
         let n = chunk.len() as i32;
-        let x0 = cx - (n * 14 - 2) / 2;
-        let y = py + 24 + row as i32 * 14;
+        let x0 = cx - n * PITCH / 2;
+        let y = py + 24 + row as i32 * PITCH;
         for (k, &(item, stacks)) in chunk.iter().enumerate() {
             let icon = bank.get(content.items[item].sprite_id).first();
-            let x = x0 + k as i32 * 14;
-            cv.blit(icon, x + 6 - icon.w / 2, y + 6 - icon.h / 2, Blit::default());
+            let (x, y) = (x0 + k as i32 * PITCH + PITCH / 2, y + PITCH / 2);
+            cv.blit_centered(icon, x, y, Blit::default());
             if stacks > 1 {
                 let n = stacks.to_string();
-                font::draw_outlined(cv, x + 12 - font::width(&n), y + 8, &n, palette::GOLD, INK);
+                font::draw_outlined(cv, x + 8 - font::width(&n), y + 3, &n, palette::GOLD, INK);
             }
         }
+    }
+    let mut y = py + 26 + rows * PITCH;
+    for line in &combo_lines {
+        font::draw_centered(cv, cx, y, line, palette::PINK, INK);
+        y += font::LINE_H;
     }
     let hint = pulse(palette::HAZE, palette::FOG, clock, 0.6);
     font::draw_centered(cv, cx, py + ph - 10, "P RESUME   Q QUIT", hint, INK);
