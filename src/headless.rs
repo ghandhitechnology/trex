@@ -7,6 +7,8 @@ use std::time::Instant;
 use crate::bot::Bot;
 use crate::engine::TICK_HZ;
 use crate::game::{Controls, Game, Scene, clock_text};
+use crate::meta;
+use crate::meta::hub::{Hub, Tab};
 use crate::meta::save::Save;
 use crate::render::canvas::Canvas;
 use crate::render::font;
@@ -23,13 +25,25 @@ pub struct DumpOptions<'a> {
     pub seed: u64,
     pub every: f32,
     pub size: (i32, i32),
+    pub hero: Option<&'a str>,
 }
 
-/// Play a bot run and write PNG frames: the title, periodic gameplay frames,
-/// the first level-up screens, a pause overlay, and the death screen.
+/// A fresh save that starts on `hero` (unlocked) if given.
+fn start_save(hero: Option<&str>) -> Save {
+    let mut save = Save::default();
+    if let Some(id) = hero {
+        save.character = id.to_string();
+        save.unlocked.insert(id.to_string());
+    }
+    save
+}
+
+/// Play a bot run and write PNG frames: the title, the hub tabs, periodic
+/// gameplay frames, the first level-up screens, a pause overlay, and the death screen.
 pub fn dump_frames(o: &DumpOptions) -> io::Result<()> {
     std::fs::create_dir_all(o.dir)?;
-    let mut game = Game::new(Save::default(), None, o.seed, o.size, true);
+    let hub_frames = dump_hub(o)?;
+    let mut game = Game::new(start_save(o.hero), None, o.seed, o.size, true);
     let mut cv = Canvas::new(o.size.0, o.size.1);
     let mut written = 0;
     let mut write = |name: &str, game: &Game, cv: &mut Canvas| -> io::Result<()> {
@@ -76,8 +90,34 @@ pub fn dump_frames(o: &DumpOptions) -> io::Result<()> {
         }
     }
     let time = game.world.as_ref().map_or(0.0, |w| w.time);
+    let written = written + hub_frames;
     println!("wrote {written} frames to {} (survived {})", o.dir.display(), clock_text(time));
     Ok(())
+}
+
+/// Hub screens over a mid-progress save.
+fn dump_hub(o: &DumpOptions) -> io::Result<usize> {
+    let mut game = Game::new(meta::demo_save(), None, o.seed, o.size, true);
+    let mut cv = Canvas::new(o.size.0, o.size.1);
+    let shots: [(&str, Tab, usize); 5] = [
+        ("hub_heroes.png", Tab::Heroes, 0),
+        ("hub_locked.png", Tab::Heroes, 3),
+        ("hub_shop.png", Tab::Shop, 2),
+        ("hub_items.png", Tab::Shop, 10),
+        ("hub_feats.png", Tab::Feats, 4),
+    ];
+    for (name, tab, pick) in shots {
+        let mut hub = Hub::new(pick.min(crate::content::get().characters.len() - 1));
+        hub.tab = tab;
+        (hub.shop, hub.feat) = (pick, pick);
+        game.scene = Scene::Hub(hub);
+        for _ in 0..20 {
+            game.update(&Controls::default());
+        }
+        game.render(&mut cv);
+        png::write(&o.dir.join(name), &cv, PNG_SCALE)?;
+    }
+    Ok(shots.len())
 }
 
 pub struct RunStats {
@@ -88,8 +128,8 @@ pub struct RunStats {
 }
 
 /// Play one bot run with no rendering until death or `max_secs`.
-pub fn sim_run(seed: u64, max_secs: f32) -> RunStats {
-    let mut game = Game::new(Save::default(), None, seed, (256, 144), false);
+pub fn sim_run(seed: u64, max_secs: f32, hero: Option<&str>) -> RunStats {
+    let mut game = Game::new(start_save(hero), None, seed, (256, 144), false);
     game.start_run();
     let mut bot = Bot::new(seed);
     loop {
@@ -107,10 +147,10 @@ pub fn sim_run(seed: u64, max_secs: f32) -> RunStats {
     }
 }
 
-pub fn sim(runs: u32, seed: u64, max_secs: f32) {
+pub fn sim(runs: u32, seed: u64, max_secs: f32, hero: Option<&str>) {
     let start = Instant::now();
     let mut stats: Vec<RunStats> =
-        (0..runs as u64).map(|r| sim_run(seed.wrapping_add(r), max_secs)).collect();
+        (0..runs as u64).map(|r| sim_run(seed.wrapping_add(r), max_secs, hero)).collect();
     stats.sort_by(|a, b| a.time.total_cmp(&b.time));
     let n = stats.len().max(1) as f32;
     let mean = |f: &dyn Fn(&RunStats) -> f32| stats.iter().map(f).sum::<f32>() / n;

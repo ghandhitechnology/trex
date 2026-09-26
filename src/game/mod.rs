@@ -10,8 +10,9 @@ use std::path::PathBuf;
 use crate::content;
 use crate::engine::DT;
 use crate::items;
+use crate::meta::hub::{Hub, HubAction};
 use crate::meta::save::{self, Save};
-use crate::meta::{self, Reward, RunResult};
+use crate::meta::{self, Reward, RunResult, Toasts};
 use crate::render::canvas::Canvas;
 use crate::render::{arena, palette, scene};
 use crate::ui;
@@ -32,6 +33,9 @@ pub struct Controls {
     pub quit: bool,
     pub yes: bool,
     pub no: bool,
+    /// Direction edges for menus (WASD or arrows).
+    pub up: bool,
+    pub down: bool,
     pub left: bool,
     pub right: bool,
     /// Number keys 1-9 in menus.
@@ -54,6 +58,8 @@ pub struct Summary {
 
 pub enum Scene {
     Title,
+    /// Hero select, shop, and feats.
+    Hub(Hub),
     Playing,
     Paused,
     LevelUp(Offer),
@@ -81,6 +87,8 @@ pub struct Game {
     pub clock: f32,
     pub view: (i32, i32),
     pub floor: Option<Canvas>,
+    /// Feat banners shown on menus.
+    pub toasts: Toasts,
     seed: u64,
     runs: u64,
     visuals: bool,
@@ -89,13 +97,22 @@ pub struct Game {
 
 impl Game {
     /// `save_path: None` keeps the save in memory only (headless modes).
-    pub fn new(save: Save, save_path: Option<PathBuf>, seed: u64, view: (i32, i32), visuals: bool) -> Self {
+    pub fn new(
+        mut save: Save,
+        save_path: Option<PathBuf>,
+        seed: u64,
+        view: (i32, i32),
+        visuals: bool,
+    ) -> Self {
         let content = content::get();
         let character = content
             .character(&save.character)
-            .filter(|&i| meta::is_unlocked(&save, &content.characters[i].id, content.characters[i].unlock))
+            .filter(|&i| meta::hero_unlocked(&save, content, i))
             .unwrap_or(0);
-        Game {
+        // Grants feats that older saves or newly added feats already qualify for.
+        let mut toasts = Toasts::default();
+        toasts.push(&meta::check_feats(&mut save, content));
+        let game = Game {
             scene: Scene::Title,
             world: None,
             save,
@@ -105,17 +122,32 @@ impl Game {
             clock: 0.0,
             view,
             floor: visuals.then(|| arena::floor(world::ARENA, seed)),
+            toasts,
             seed,
             runs: 0,
             visuals,
             recorded: false,
+        };
+        if game.toasts.current().is_some() {
+            game.store_save();
+        }
+        game
+    }
+
+    fn store_save(&self) {
+        if let Some(path) = &self.save_path {
+            let _ = save::store(path, &self.save);
         }
     }
 
     pub fn start_run(&mut self) {
         let seed = self.seed.wrapping_add(self.runs.wrapping_mul(0x9e37_79b9_7f4a_7c15));
         self.runs += 1;
-        self.world = Some(World::new(seed, self.character, self.view, self.visuals));
+        let mut w = World::new(seed, self.character, self.view, self.visuals);
+        w.build.bonus = meta::run_mods(&self.save, content::get());
+        w.refresh_build();
+        w.player.hp = w.max_hp();
+        self.world = Some(w);
         self.recorded = false;
         self.scene = Scene::Playing;
     }
@@ -140,6 +172,9 @@ impl Game {
 
     pub fn update(&mut self, c: &Controls) -> Signal {
         self.clock += DT;
+        if matches!(self.scene, Scene::Title | Scene::Hub(_) | Scene::Dead(_)) {
+            self.toasts.update(DT);
+        }
         if self.quit_prompt {
             if c.yes || c.quit {
                 self.finish_run();
@@ -157,9 +192,26 @@ impl Game {
         match &mut self.scene {
             Scene::Title => {
                 if c.confirm {
-                    self.start_run();
+                    self.scene = Scene::Hub(Hub::new(self.character));
                 }
             }
+            Scene::Hub(hub) => match hub.update(c, &mut self.save, meta::screens::shop_cols(self.view.0)) {
+                HubAction::None => {}
+                HubAction::Play(i) => {
+                    self.character = i;
+                    self.start_run();
+                }
+                HubAction::Back => {
+                    if meta::hero_unlocked(&self.save, content::get(), hub.hero) {
+                        self.character = hub.hero;
+                    }
+                    self.scene = Scene::Title;
+                }
+                HubAction::Bought(feats) => {
+                    self.toasts.push(&feats);
+                    self.store_save();
+                }
+            },
             Scene::Playing => {
                 if c.pause {
                     self.scene = Scene::Paused;
@@ -224,7 +276,7 @@ impl Game {
                     if c.confirm {
                         self.start_run();
                     } else if c.pause {
-                        self.scene = Scene::Title;
+                        self.scene = Scene::Hub(Hub::new(self.character));
                         self.world = None;
                     }
                 }
@@ -270,20 +322,16 @@ impl Game {
             time: w.time,
             kills: w.kills,
             level: w.player.level,
+            build: &w.build,
         };
         let reward = if self.recorded {
-            Reward {
-                bones: 0,
-                best: self.save.best.get(result.character).copied().unwrap_or(0.0),
-                new_best: false,
-            }
+            Reward { best: self.save.best.get(result.character).copied().unwrap_or(0.0), ..Reward::default() }
         } else {
             self.recorded = true;
             self.save.character = result.character.to_string();
-            let r = meta::record_run(&mut self.save, &result);
-            if let Some(path) = &self.save_path {
-                let _ = save::store(path, &self.save);
-            }
+            let r = meta::record_run(&mut self.save, content, &result);
+            self.toasts.push(&r.feats);
+            self.store_save();
             r
         };
         Summary { time: w.time, kills: w.kills, level: w.player.level, reward, age: 0.0 }
@@ -291,6 +339,7 @@ impl Game {
 
     pub fn render(&self, cv: &mut Canvas) {
         match (&self.scene, &self.world) {
+            (Scene::Hub(hub), _) => meta::screens::hub(cv, hub, &self.save, self.floor.as_ref(), self.clock),
             (Scene::Title, _) | (_, None) => ui::screens::title(cv, self),
             (scene, Some(w)) => {
                 scene::draw_world(
@@ -309,6 +358,9 @@ impl Game {
                     _ => {}
                 }
             }
+        }
+        if matches!(self.scene, Scene::Title | Scene::Hub(_) | Scene::Dead(_)) {
+            meta::screens::toast(cv, &self.toasts);
         }
         if self.quit_prompt {
             ui::screens::quit_prompt(cv);

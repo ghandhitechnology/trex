@@ -10,6 +10,7 @@ use crate::enemies::director::WavesDef;
 use crate::items::ItemDef;
 use crate::items::synergy::SynergyDef;
 use crate::meta::characters::CharacterDef;
+use crate::meta::defs::MetaDef;
 use crate::render::sprite::{SpriteId, bank};
 
 const ITEMS: &str = include_str!("../content/items.ron");
@@ -17,6 +18,7 @@ const ENEMIES: &str = include_str!("../content/enemies.ron");
 const CHARACTERS: &str = include_str!("../content/characters.ron");
 const WAVES: &str = include_str!("../content/waves.ron");
 const SYNERGIES: &str = include_str!("../content/synergies.ron");
+const META: &str = include_str!("../content/meta.ron");
 
 pub struct Content {
     pub items: Vec<ItemDef>,
@@ -24,6 +26,7 @@ pub struct Content {
     pub characters: Vec<CharacterDef>,
     pub waves: WavesDef,
     pub synergies: Vec<SynergyDef>,
+    pub meta: MetaDef,
 }
 
 static CONTENT: OnceLock<Content> = OnceLock::new();
@@ -60,6 +63,7 @@ impl Content {
             characters: parse("characters.ron", CHARACTERS)?,
             waves: parse("waves.ron", WAVES)?,
             synergies: parse("synergies.ron", SYNERGIES)?,
+            meta: parse("meta.ron", META)?,
         };
         c.resolve()?;
         Ok(c)
@@ -80,9 +84,11 @@ impl Content {
         for ch in &mut self.characters {
             let owner = format!("character `{}`", ch.id);
             ch.sprite_id = sprite(&ch.sprite, &owner)?;
+            ch.idle_id = (!ch.idle.is_empty()).then(|| sprite(&ch.idle, &owner)).transpose()?;
             ch.weapon.shot_id = sprite(&ch.weapon.shot, &owner)?;
         }
-        self.waves.resolve(&self.enemies)
+        self.waves.resolve(&self.enemies)?;
+        crate::meta::defs::resolve(self)
     }
 
     pub fn character(&self, id: &str) -> Option<usize> {

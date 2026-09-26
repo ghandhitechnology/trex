@@ -387,6 +387,8 @@ fn sprite(name: &str, owner: &str) -> Result<SpriteId, String> {
 #[derive(Clone, Debug, Default)]
 pub struct Build {
     pub items: Vec<(usize, u32)>,
+    /// Permanent upgrade modifiers from the save, applied like a passive.
+    pub bonus: Vec<StatMod>,
 }
 
 impl Build {
@@ -417,7 +419,7 @@ impl Build {
     }
 
     /// Final stats: character base, then every modifier from the passive,
-    /// item stacks, and active synergies.
+    /// upgrades, item stacks, and active synergies.
     pub fn stats(&self, ch: &CharacterDef, content: &Content) -> Stats {
         let mut base = Stats::defaults();
         for (s, v) in &ch.base {
@@ -426,7 +428,7 @@ impl Build {
         let item_mods =
             self.items.iter().flat_map(|&(i, n)| (0..n).flat_map(move |_| content.items[i].stats.iter()));
         let synergy_mods = self.synergies(content).flat_map(|k| content.synergies[k].stats.iter());
-        apply_mods(&base, ch.stats.iter().chain(item_mods).chain(synergy_mods))
+        apply_mods(&base, ch.stats.iter().chain(&self.bonus).chain(item_mods).chain(synergy_mods))
     }
 
     /// Every trigger instance. Each stack adds its triggers again; active
