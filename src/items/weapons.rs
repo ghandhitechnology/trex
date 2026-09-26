@@ -136,9 +136,12 @@ pub struct Armed {
 }
 
 /// Each stack past the first adds +10% damage, and stacks 2 and 4 add +1
-/// count. Auras grow 15% in radius per stack instead of count.
+/// count. Orbits add a blade every stack; auras grow 15% in radius per stack
+/// instead of count.
 const STACK_DAMAGE: f32 = 0.1;
 const STACK_AURA_AREA: f32 = 0.15;
+/// Most blades an orbit weapon can carry, from stacks, synergies and Shots.
+const MAX_BLADES: u32 = 6;
 
 impl Armed {
     fn new(item: usize, def: &WeaponDef, stacks: u32) -> Self {
@@ -150,7 +153,12 @@ impl Armed {
             sprite: def.sprite_id,
             damage: def.damage * (1.0 + STACK_DAMAGE * extra as f32),
             rate: def.rate,
-            count: def.count + if aura { 0 } else { extra.div_ceil(2) },
+            count: def.count
+                + match def.kind {
+                    WeaponKind::Aura { .. } => 0,
+                    WeaponKind::Orbit { .. } => extra,
+                    _ => extra.div_ceil(2),
+                },
             area: 1.0 + if aura { STACK_AURA_AREA * extra as f32 } else { 0.0 },
             pierce: 0,
             bounce: 0,
@@ -485,7 +493,7 @@ pub fn shots_ended(w: &mut World) {
 /// World positions of an orbit weapon's blades.
 pub fn blades(w: &World, k: usize) -> Vec<Vec2> {
     let WeaponKind::Orbit { radius, .. } = w.gear.weapons[k].kind else { return Vec::new() };
-    let n = count(w, k);
+    let n = count(w, k).min(MAX_BLADES);
     let r = scaled(w, k, radius);
     let spin = w.gear.weapons[k].spin;
     (0..n).map(|b| w.player.pos + Vec2::from_angle(spin + b as f32 / n as f32 * TAU) * r).collect()

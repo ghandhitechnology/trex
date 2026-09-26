@@ -189,7 +189,8 @@ triggers read these stats with the stat defaults as their base instead of the
 hero's `base`, so an item behaves the same on every hero; only modifiers
 (items, upgrades, synergies, hero `stats`) change them. Weapon hits fire `Hit`,
 `Crit` and `Kill` like the main weapon. Each stack past the first adds +10%
-damage; stacks 2 and 4 add +1 count (auras grow 15% per stack instead).
+damage; stacks 2 and 4 add +1 count (orbits add +1 blade every stack, up to
+6 blades; auras grow 15% per stack instead).
 
 ## synergies.ron
 
