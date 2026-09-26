@@ -81,6 +81,64 @@ pub const SPRITES: &[SpriteDef] = &[
         ],
     },
     SpriteDef {
+        name: "rex_attack",
+        outline: true,
+        frames: &[
+            &[
+                ".......gggggg.", //
+                "......glllllgg", //
+                "......gllwklgg", //
+                "......glllgggg", //
+                "......gkwkwkk.", //
+                "......goay....", //
+                "...g..gkoa....", //
+                "..gg.gffffwf..", //
+                ".ggggggggxxgg.", //
+                "gg..gfgggxx...", //
+                "....ffgggg....", //
+                "....ff..gg....", //
+                "...fff..ggg...", //
+                "..............", //
+            ],
+            &[
+                ".......ggggg..", //
+                "......glllllg.", //
+                "......gllwklgg", //
+                "......glllgggg", //
+                "......gggggggg", //
+                "......gkwkwkk.", //
+                "...g..gko.....", //
+                "..gg.gfffff...", //
+                ".ggggggggxxgg.", //
+                "gg..gfgggxx...", //
+                "....ffgggg....", //
+                "....ff..gg....", //
+                "...fff..ggg...", //
+                "..............", //
+            ],
+        ],
+    },
+    SpriteDef {
+        name: "rex_dash",
+        outline: true,
+        frames: &[&[
+            "..............", //
+            "..............", //
+            "..............", //
+            ".......ggggg..", //
+            "......glllllg.", //
+            "......gllwklgg", //
+            "......glllgggg", //
+            "ggg...gggggggg", //
+            ".ggggggkwkwkk.", //
+            "..gggggffffff.", //
+            "....fgggxxgg..", //
+            "...ff..gggg...", //
+            "..ff.....gg...", //
+            ".ff......ggg..", //
+        ]],
+    },
+    SpriteDef {
         name: "trike",
         outline: true,
         frames: &[
@@ -155,6 +213,64 @@ pub const SPRITES: &[SpriteDef] = &[
                 "..............", //
             ],
         ],
+    },
+    SpriteDef {
+        name: "trike_attack",
+        outline: true,
+        frames: &[
+            &[
+                "..............", //
+                "..............", //
+                "..............", //
+                "..............", //
+                ".........rr...", //
+                "...aaa..rYrr..", //
+                ".aaaaaarrrrr..", //
+                "aooaaaaarrrwww", //
+                ".oaaaaaaaaakaa", //
+                "..oaaaaaaaaYY.", //
+                "..oYYYYYYao...", //
+                "..oo.oo..oo...", //
+                "..zz.zz..zz...", //
+                "..............", //
+            ],
+            &[
+                "..............", //
+                "..............", //
+                "..............", //
+                "........rr....", //
+                ".......rYrr...", //
+                "...aaa.rrrr..w", //
+                ".aaaaaarrrraww", //
+                "aooaaaaaarakaa", //
+                ".oaaaaaaaaaaaw", //
+                "..oaaaaaaaaYY.", //
+                "..oYYYYYYao...", //
+                "..oo.oo..oo...", //
+                "..zz.zz..zz...", //
+                "..............", //
+            ],
+        ],
+    },
+    SpriteDef {
+        name: "trike_dash",
+        outline: true,
+        frames: &[&[
+            "..............", //
+            "..............", //
+            "..............", //
+            "..............", //
+            "..............", //
+            ".........rr...", //
+            "...aaa..rYrr..", //
+            ".aaaaaarrrrr..", //
+            "aooaaaaarrrwww", //
+            ".oaaaaaaaaakaa", //
+            "..oaaaaaaaaYY.", //
+            ".ooYYYYYYao...", //
+            "oo...oo...oo..", //
+            "z.....zz...zz.", //
+        ]],
     },
     SpriteDef {
         name: "ptera",
@@ -233,6 +349,64 @@ pub const SPRITES: &[SpriteDef] = &[
         ],
     },
     SpriteDef {
+        name: "ptera_attack",
+        outline: true,
+        frames: &[
+            &[
+                "......bb......", //
+                ".....bBb......", //
+                "..b.bBBb..oo..", //
+                "..bbbBBb.oBBo.", //
+                "...bbBBbbBBkYY", //
+                ".....bBBBBB...", //
+                "....bBBBBBbYY.", //
+                "...bBBIIBBb...", //
+                "......bIIb....", //
+                "......bbb.....", //
+                "..............", //
+                ".......y.y....", //
+                "..............", //
+                "..............", //
+            ],
+            &[
+                "..............", //
+                "..............", //
+                "..........oo..", //
+                ".bb......oBBo.", //
+                "..bBbbbbbBBkYY", //
+                "...bBBBBBBB...", //
+                "....bBBBBBbYY.", //
+                "..bbBBIIBBb...", //
+                ".bb...bIIb....", //
+                "......bbb.....", //
+                "..............", //
+                ".......y.y....", //
+                "..............", //
+                "..............", //
+            ],
+        ],
+    },
+    SpriteDef {
+        name: "ptera_dash",
+        outline: true,
+        frames: &[&[
+            "..............", //
+            "..............", //
+            "bb............", //
+            ".bBbb.........", //
+            "..bBBbb.......", //
+            "...bBBBbb.oo..", //
+            "....bBBBBoBBo.", //
+            "...bbbBBBBBkYY", //
+            "..bb.bBBIIBYY.", //
+            "...yy..bIIb...", //
+            "........bb....", //
+            "..............", //
+            "..............", //
+            "..............", //
+        ]],
+    },
+    SpriteDef {
         name: "raptor",
         outline: true,
         frames: &[
@@ -307,6 +481,64 @@ pub const SPRITES: &[SpriteDef] = &[
                 ".....w...w....", //
             ],
         ],
+    },
+    SpriteDef {
+        name: "raptor_attack",
+        outline: true,
+        frames: &[
+            &[
+                "..............", //
+                "..............", //
+                "..............", //
+                "c.........rrr.", //
+                "rc.......rrwkr", //
+                ".rc......rrrrr", //
+                "..rrc...rrYYY.", //
+                "...rrcrrrr....", //
+                "....rrrrcrrrYw", //
+                ".....rYYYr...w", //
+                "......rrc.....", //
+                "......c..c....", //
+                ".....cc...cc..", //
+                ".....w.....w..", //
+            ],
+            &[
+                "..............", //
+                "..............", //
+                "..............", //
+                "..........rrr.", //
+                "c........rrwkr", //
+                ".rc......rrrrr", //
+                "..rrc...rrYYY.", //
+                "...rrcrrrr....", //
+                "....rrrrcrrrY.", //
+                ".....rYYYr..Y.", //
+                "......rrc.....", //
+                "......c..c....", //
+                ".....cc...cc..", //
+                ".....w.....w..", //
+            ],
+        ],
+    },
+    SpriteDef {
+        name: "raptor_dash",
+        outline: true,
+        frames: &[&[
+            "..............", //
+            "..............", //
+            "..........rrr.", //
+            ".........rrwkr", //
+            ".........rrrrr", //
+            "cc.......rYYY.", //
+            ".rrcc...rrr...", //
+            "...rrrcrrrrYw.", //
+            ".....rYYYrc.w.", //
+            "...cccc..cc...", //
+            "..w.......cw..", //
+            "..............", //
+            "..............", //
+            "..............", //
+        ]],
     },
     SpriteDef {
         name: "stego",
