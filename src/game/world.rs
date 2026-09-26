@@ -235,6 +235,9 @@ impl World {
         self.build.add(item);
         self.refresh_build();
         self.fx.level_up(self.player.pos);
+        // Dead enemies were removed after the last grid build; LevelUp
+        // triggers look enemies up by grid index.
+        self.rebuild_grid();
         self.events.push_back(GameEvent::at(On::LevelUp, self.player.pos, 0));
         effects::process(self);
     }
