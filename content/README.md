@@ -272,6 +272,10 @@ Enemies with `hp` of 40 or more, and elites, show a health bar when damaged.
     desc: "Spits embers. Dashes knock enemies back.",
     sprite: "rex",                      // walk frames
     idle: "rex_idle",                   // optional: idle frames, else the first walk frame
+    attack: "rex_attack",               // optional: pose played once per shot
+    dash: "rex_dash",                   // optional: pose held through a dash
+    muzzle: (6.0, -2.0),                // optional: where shots leave the sprite, px from center facing right
+    legs: 11,                           // optional: art row where legs start; running keeps the stride's legs under the attack pose
     unlock: 0,                          // optional: bones to unlock, 0 = free
     weapon: (shot: "bolt", pattern: Aimed),
     base: { MaxHp: 8.0, FireRate: 2.0 }, // optional: overrides stat defaults for the hero and its weapon
@@ -286,7 +290,9 @@ Enemies with `hp` of 40 or more, and elites, show a health bar when damaged.
 `Radial` (`Shots` evenly around the player, no target needed).
 
 Each hero has a walk sprite and an `_idle` sprite in `src/meta/sprites.rs`,
-two frames each. Compare heroes with `trex --sim --runs 40`.
+two frames each, plus `_attack` and `_dash` poses. Poses play once, frames
+spread evenly over the pose. Check every pose with `trex --poses FILE` and
+compare heroes with `trex --sim --runs 40`.
 
 ## waves.ron
 

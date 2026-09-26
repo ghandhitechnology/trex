@@ -59,6 +59,7 @@ trex --sim --runs 30 [--hero ID] [--save fresh|unlocked|maxed] [--items]
 trex --meta --runs 200
 trex --stress [--minutes 60]
 trex --sheet sheet.png
+trex --poses poses.png
 ```
 
 - `--dump-frames` plays a bot run and writes 4x PNGs of the title, every hub
@@ -66,6 +67,8 @@ trex --sheet sheet.png
   without a terminal.
 - `--clip` fast-forwards an unkillable bot run and writes every frame at 1x
   (the trailer's footage, `trailer/tools/capture.sh`).
+- `--poses` lays out every hero's idle, walk, attack, running attack, and
+  dash frames, with the muzzle marked.
 - `--sim` and `--items` print survival per hero and per item from bot runs.
   `--meta` shows when unlocks and feats land over many runs. `--stress`
   prints entity counts and frame cost per minute.

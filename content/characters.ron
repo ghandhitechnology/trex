@@ -6,6 +6,8 @@
         desc: "Spits embers. Dashes knock enemies back.",
         sprite: "rex",
         idle: "rex_idle",
+        muzzle: (6.0, -2.0),
+        legs: 11,
         weapon: (shot: "bolt"),
         base: {
             MaxHp: 8.0,
@@ -23,6 +25,7 @@
         desc: "Fast and fragile. Twin feathers. Dashes fire a volley.",
         sprite: "ptera",
         idle: "ptera_idle",
+        muzzle: (7.0, -3.0),
         unlock: 250,
         weapon: (shot: "feather_shot"),
         base: {
@@ -45,6 +48,8 @@
         desc: "Slow and tough. Horns pierce. Taking a hit makes a blast.",
         sprite: "trike",
         idle: "trike_idle",
+        muzzle: (7.0, -2.0),
+        legs: 11,
         unlock: 300,
         weapon: (shot: "horn"),
         base: {
@@ -66,6 +71,8 @@
         desc: "Short claws, fast strikes. Crits bleed.",
         sprite: "raptor",
         idle: "raptor_idle",
+        muzzle: (5.0, 2.0),
+        legs: 11,
         unlock: 400,
         weapon: (shot: "claw"),
         base: {
@@ -89,6 +96,8 @@
         desc: "Homing bubbles slow whatever they hit.",
         sprite: "spino",
         idle: "spino_idle",
+        muzzle: (6.0, -1.0),
+        legs: 11,
         unlock: 500,
         weapon: (shot: "bubble"),
         base: {
@@ -110,6 +119,8 @@
         desc: "Spikes fly in every direction. Taking a hit fires a spike ring.",
         sprite: "stego",
         idle: "stego_idle",
+        muzzle: (0.0, -4.0),
+        legs: 11,
         unlock: 600,
         weapon: (shot: "spike", pattern: Radial),
         base: {
@@ -130,6 +141,8 @@
         desc: "Pebble shotgun. Dashes headbutt and explode.",
         sprite: "pachy",
         idle: "pachy_idle",
+        muzzle: (5.0, -1.0),
+        legs: 11,
         unlock: 700,
         weapon: (shot: "pebble"),
         base: {

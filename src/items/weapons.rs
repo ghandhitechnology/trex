@@ -419,7 +419,7 @@ fn gun(
         (0..n).map(|j| Vec2::from_angle(base + j as f32 / n as f32 * TAU)).collect()
     } else {
         let Some(t) = w.nearest_enemy(pos, reach, |_| true) else { return false };
-        let aim = (w.enemies[t].pos - pos).norm();
+        let aim = player::lead(w, t, pos, w.item_stats.get(Stat::ShotSpeed) * speed);
         let step = if n > 1 { arc.to_radians() / (n - 1) as f32 } else { 0.0 };
         (0..n).map(|j| aim.rotate((j as f32 - (n - 1) as f32 / 2.0) * step)).collect()
     };

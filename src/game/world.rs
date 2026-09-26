@@ -17,6 +17,10 @@ use crate::render::sprite::SpriteId;
 
 /// Arena size in world pixels. The view is smaller and follows the player.
 pub const ARENA: Rect = Rect::new(0.0, 0.0, 512.0, 320.0);
+/// Level-up burst: shove radius (the gold ring's size), force, and grace seconds.
+const LEVEL_SHOVE_RADIUS: f32 = 34.0;
+const LEVEL_SHOVE: f32 = 150.0;
+const LEVEL_GRACE: f32 = 0.5;
 
 #[derive(Clone, Copy, Debug)]
 pub struct Shot {
@@ -109,7 +113,13 @@ pub struct Player {
     pub dash_time: f32,
     pub dash_cd: f32,
     pub dash_dir: Vec2,
+    /// Seconds a dash press waits for the cooldown to end.
+    pub dash_buffer: f32,
     pub fire_cd: f32,
+    /// Seconds left of the attack pose; the hero faces `aim` meanwhile.
+    pub attack: f32,
+    /// Direction of the last aimed shot.
+    pub aim: Vec2,
     pub regen: f32,
     pub xp: f32,
     pub xp_next: f32,
@@ -231,13 +241,22 @@ impl World {
         weapons::refresh(self);
     }
 
+    /// Take a level-up item. The burst shoves nearby enemies back and the
+    /// hero gets a moment of grace, so a pick never lands straight into a hit.
     pub fn add_item(&mut self, item: usize) {
         self.build.add(item);
         self.refresh_build();
-        self.fx.level_up(self.player.pos);
-        // Dead enemies were removed after the last grid build; LevelUp
-        // triggers look enemies up by grid index.
+        let pos = self.player.pos;
+        self.fx.level_up(pos);
+        // Dead enemies were removed after the last grid build; the shove and
+        // LevelUp triggers look enemies up by grid index.
         self.rebuild_grid();
+        let enemies = &content::get().enemies;
+        for i in self.enemies_in(pos, LEVEL_SHOVE_RADIUS) {
+            let e = &mut self.enemies[i];
+            e.push += (e.pos - pos).norm() * LEVEL_SHOVE / enemies[e.kind].mass.max(1.0);
+        }
+        self.player.invuln = self.player.invuln.max(LEVEL_GRACE);
         self.events.push_back(GameEvent::at(On::LevelUp, self.player.pos, 0));
         effects::process(self);
     }

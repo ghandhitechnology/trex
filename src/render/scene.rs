@@ -6,10 +6,11 @@ use super::canvas::{Blit, Canvas};
 use super::light;
 use super::noise;
 use super::palette::{self, Color};
-use super::sprite::bank;
+use super::sprite::{Frame, Sprite, SpriteId, bank};
 use crate::content;
 use crate::enemies;
 use crate::enemies::director::WARN_TIME;
+use crate::game::player::{ATTACK_POSE, DASH_TIME};
 use crate::game::world::World;
 use crate::meta::characters::CharacterDef;
 
@@ -171,15 +172,45 @@ fn player(cv: &mut Canvas, w: &World, ch: &CharacterDef, (px, py): (i32, i32), d
         return;
     }
     let moving = p.vel.len_sq() > 25.0;
-    let f = match ch.idle_id {
-        _ if moving => s.frame_at(p.anim * 1.5, 6.0),
-        Some(idle) => bank().get(idle).frame_at(w.time, 2.5),
-        None => s.first(),
+    let pose = |id: Option<SpriteId>, left: f32, len: f32| {
+        id.filter(|_| left > 0.0).map(|id| pose_frame(bank().get(id), 1.0 - left / len))
+    };
+    let dash = pose(ch.dash_id, p.dash_time, DASH_TIME);
+    let attack = pose(ch.attack_id, p.attack, ATTACK_POSE);
+    let stride = s.frame_at(p.anim * 1.5, 6.0);
+    let running;
+    let f = match (dash, attack, ch.idle_id) {
+        (Some(f), _, _) => f,
+        (_, Some(a), _) if moving && ch.legs > 0 => {
+            running = over_legs(a, stride, ch.legs + 1);
+            &running
+        }
+        (_, Some(a), _) => a,
+        _ if moving => stride,
+        (_, _, Some(idle)) => bank().get(idle).frame_at(w.time, 2.5),
+        _ => s.first(),
     };
     let flash = (p.hurt > 0.0).then_some(palette::BONE);
     // Running bob: one pixel up on alternating strides.
-    let bob = if moving && (p.anim * 9.0) as i32 % 2 == 0 { -1 } else { 0 };
+    let bob = if moving && dash.is_none() && (p.anim * 9.0) as i32 % 2 == 0 { -1 } else { 0 };
     cv.blit_centered(f, px, py + bob, Blit { flip_x: p.facing < 0.0, flash, alpha: 255 });
+}
+
+/// The frame of a one-shot pose `t` of the way through (0 to 1).
+fn pose_frame(s: &Sprite, t: f32) -> &Frame {
+    let i = (t.clamp(0.0, 0.999) * s.frames.len() as f32) as usize;
+    &s.frames[i]
+}
+
+/// `top` above row `cut` over `base` from `cut` down: an attack pose that
+/// keeps the running legs. Frames of different sizes keep `top` whole.
+pub fn over_legs(top: &Frame, base: &Frame, cut: i32) -> Frame {
+    if top.w != base.w || top.h != base.h {
+        return Frame { w: top.w, h: top.h, px: top.px.clone() };
+    }
+    let split = (cut.clamp(0, top.h) * top.w) as usize;
+    let px = top.px[..split].iter().chain(&base.px[split..]).copied().collect();
+    Frame { w: top.w, h: top.h, px }
 }
 
 /// Death transition: a dark iris closes on the player.

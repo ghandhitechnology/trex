@@ -33,6 +33,7 @@ usage:
   trex --stress [--minutes N] [--seed S] [--size WxH] [--hero ID]
                                         unkillable bot run, print entity counts and frame cost
   trex --sheet FILE                     write every sprite to one PNG
+  trex --poses FILE                     write every hero's poses to one PNG
 
 env:
   TREX_GFX=shm|file|direct   force the graphics transfer medium
@@ -145,6 +146,9 @@ fn run(args: &Args) -> Result<(), String> {
     }
     if let Some(file) = args.value("--sheet") {
         return headless::sheet(&PathBuf::from(file)).map_err(|e| e.to_string());
+    }
+    if let Some(file) = args.value("--poses") {
+        return headless::poses(&PathBuf::from(file)).map_err(|e| e.to_string());
     }
     if let Some(a) = args.0.first() {
         return Err(format!("unknown argument {a}\n\n{USAGE}"));
