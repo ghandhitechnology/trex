@@ -1,0 +1,1955 @@
+{
+ "adrenaline": {
+  "category": "items",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/items/adrenaline.png"
+  ]
+ },
+ "amber-resin": {
+  "category": "items",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/items/amber-resin.png"
+  ]
+ },
+ "beetle": {
+  "category": "enemies",
+  "size": [
+   15,
+   11
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/enemies/beetle-0.png",
+   "sprites/enemies/beetle-1.png"
+  ],
+  "strip": "sprites/enemies/beetle-strip.png"
+ },
+ "big-bones": {
+  "category": "items",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/items/big-bones.png"
+  ]
+ },
+ "big-meteor": {
+  "category": "projectiles",
+  "size": [
+   13,
+   13
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/projectiles/big-meteor.png"
+  ]
+ },
+ "big-quill": {
+  "category": "projectiles",
+  "size": [
+   7,
+   7
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/projectiles/big-quill.png"
+  ]
+ },
+ "big-roar": {
+  "category": "items",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/items/big-roar.png"
+  ]
+ },
+ "black-coffee": {
+  "category": "items",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/items/black-coffee.png"
+  ]
+ },
+ "blood-drop": {
+  "category": "items",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/items/blood-drop.png"
+  ]
+ },
+ "bolt": {
+  "category": "hero-shots",
+  "size": [
+   6,
+   6
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/hero-shots/bolt-0.png",
+   "sprites/hero-shots/bolt-1.png"
+  ],
+  "strip": "sprites/hero-shots/bolt-strip.png"
+ },
+ "bone": {
+  "category": "ui",
+  "size": [
+   9,
+   5
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/ui/bone.png"
+  ]
+ },
+ "bone-rang": {
+  "category": "items",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/items/bone-rang.png"
+  ]
+ },
+ "bone-storm": {
+  "category": "items",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/items/bone-storm.png"
+  ]
+ },
+ "boomer": {
+  "category": "enemies",
+  "size": [
+   13,
+   14
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/enemies/boomer-0.png",
+   "sprites/enemies/boomer-1.png"
+  ],
+  "strip": "sprites/enemies/boomer-strip.png"
+ },
+ "boulder-shot": {
+  "category": "items",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/items/boulder-shot.png"
+  ]
+ },
+ "broodmother": {
+  "category": "enemies",
+  "size": [
+   16,
+   14
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/enemies/broodmother-0.png",
+   "sprites/enemies/broodmother-1.png"
+  ],
+  "strip": "sprites/enemies/broodmother-strip.png"
+ },
+ "brute": {
+  "category": "enemies",
+  "size": [
+   16,
+   15
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/enemies/brute-0.png",
+   "sprites/enemies/brute-1.png"
+  ],
+  "strip": "sprites/enemies/brute-strip.png"
+ },
+ "bubble": {
+  "category": "hero-shots",
+  "size": [
+   6,
+   6
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/hero-shots/bubble-0.png",
+   "sprites/hero-shots/bubble-1.png"
+  ],
+  "strip": "sprites/hero-shots/bubble-strip.png"
+ },
+ "claw": {
+  "category": "hero-shots",
+  "size": [
+   6,
+   8
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/hero-shots/claw-0.png",
+   "sprites/hero-shots/claw-1.png"
+  ],
+  "strip": "sprites/hero-shots/claw-strip.png"
+ },
+ "cluster-mine": {
+  "category": "projectiles",
+  "size": [
+   9,
+   8
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/projectiles/cluster-mine-0.png",
+   "sprites/projectiles/cluster-mine-1.png"
+  ],
+  "strip": "sprites/projectiles/cluster-mine-strip.png"
+ },
+ "cold-snap": {
+  "category": "items",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/items/cold-snap.png"
+  ]
+ },
+ "colossus": {
+  "category": "bosses",
+  "size": [
+   26,
+   17
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/bosses/colossus-0.png",
+   "sprites/bosses/colossus-1.png"
+  ],
+  "strip": "sprites/bosses/colossus-strip.png"
+ },
+ "cursor": {
+  "category": "ui",
+  "size": [
+   7,
+   5
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/ui/cursor.png"
+  ]
+ },
+ "dash-icon": {
+  "category": "ui",
+  "size": [
+   9,
+   9
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/ui/dash-icon.png"
+  ]
+ },
+ "dilo": {
+  "category": "enemies",
+  "size": [
+   16,
+   14
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/enemies/dilo-0.png",
+   "sprites/enemies/dilo-1.png"
+  ],
+  "strip": "sprites/enemies/dilo-strip.png"
+ },
+ "drill-bit": {
+  "category": "items",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/items/drill-bit.png"
+  ]
+ },
+ "drill-slug": {
+  "category": "projectiles",
+  "size": [
+   8,
+   8
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/projectiles/drill-slug-0.png",
+   "sprites/projectiles/drill-slug-1.png"
+  ],
+  "strip": "sprites/projectiles/drill-slug-strip.png"
+ },
+ "eyestalk": {
+  "category": "enemies",
+  "size": [
+   13,
+   16
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/enemies/eyestalk-0.png",
+   "sprites/enemies/eyestalk-1.png"
+  ],
+  "strip": "sprites/enemies/eyestalk-strip.png"
+ },
+ "feather": {
+  "category": "items",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/items/feather.png"
+  ]
+ },
+ "feather-shot": {
+  "category": "hero-shots",
+  "size": [
+   6,
+   6
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/hero-shots/feather-shot-0.png",
+   "sprites/hero-shots/feather-shot-1.png"
+  ],
+  "strip": "sprites/hero-shots/feather-shot-strip.png"
+ },
+ "fire-saw": {
+  "category": "projectiles",
+  "size": [
+   9,
+   9
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/projectiles/fire-saw-0.png",
+   "sprites/projectiles/fire-saw-1.png"
+  ],
+  "strip": "sprites/projectiles/fire-saw-strip.png"
+ },
+ "fossil": {
+  "category": "items",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/items/fossil.png"
+  ]
+ },
+ "frog": {
+  "category": "enemies",
+  "size": [
+   15,
+   13
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/enemies/frog-0.png",
+   "sprites/enemies/frog-1.png"
+  ],
+  "strip": "sprites/enemies/frog-strip.png"
+ },
+ "frost": {
+  "category": "projectiles",
+  "size": [
+   3,
+   3
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/projectiles/frost.png"
+  ]
+ },
+ "frost-fang": {
+  "category": "items",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/items/frost-fang.png"
+  ]
+ },
+ "frost-halo": {
+  "category": "items",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/items/frost-halo.png"
+  ]
+ },
+ "gem": {
+  "category": "pickups",
+  "size": [
+   5,
+   6
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/pickups/gem-0.png",
+   "sprites/pickups/gem-1.png"
+  ],
+  "strip": "sprites/pickups/gem-strip.png"
+ },
+ "gem-big": {
+  "category": "pickups",
+  "size": [
+   7,
+   8
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/pickups/gem-big-0.png",
+   "sprites/pickups/gem-big-1.png"
+  ],
+  "strip": "sprites/pickups/gem-big-strip.png"
+ },
+ "ghost": {
+  "category": "enemies",
+  "size": [
+   13,
+   14
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/enemies/ghost-0.png",
+   "sprites/enemies/ghost-1.png"
+  ],
+  "strip": "sprites/enemies/ghost-strip.png"
+ },
+ "glass-cannon": {
+  "category": "items",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/items/glass-cannon.png"
+  ]
+ },
+ "glob": {
+  "category": "enemy-shots",
+  "size": [
+   6,
+   6
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/enemy-shots/glob-0.png",
+   "sprites/enemy-shots/glob-1.png"
+  ],
+  "strip": "sprites/enemy-shots/glob-strip.png"
+ },
+ "golden-egg": {
+  "category": "items",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/items/golden-egg.png"
+  ]
+ },
+ "golem": {
+  "category": "enemies",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/enemies/golem-0.png",
+   "sprites/enemies/golem-1.png"
+  ],
+  "strip": "sprites/enemies/golem-strip.png"
+ },
+ "gravity-egg": {
+  "category": "items",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/items/gravity-egg.png"
+  ]
+ },
+ "grit": {
+  "category": "enemy-shots",
+  "size": [
+   5,
+   5
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/enemy-shots/grit-0.png",
+   "sprites/enemy-shots/grit-1.png"
+  ],
+  "strip": "sprites/enemy-shots/grit-strip.png"
+ },
+ "grub": {
+  "category": "enemies",
+  "size": [
+   14,
+   11
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/enemies/grub-0.png",
+   "sprites/enemies/grub-1.png"
+  ],
+  "strip": "sprites/enemies/grub-strip.png"
+ },
+ "heart-empty": {
+  "category": "ui",
+  "size": [
+   9,
+   8
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/ui/heart-empty.png"
+  ]
+ },
+ "heart-full": {
+  "category": "ui",
+  "size": [
+   9,
+   8
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/ui/heart-full.png"
+  ]
+ },
+ "heart-half": {
+  "category": "ui",
+  "size": [
+   9,
+   8
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/ui/heart-half.png"
+  ]
+ },
+ "heart-jar": {
+  "category": "items",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/items/heart-jar.png"
+  ]
+ },
+ "hive-eye": {
+  "category": "bosses",
+  "size": [
+   22,
+   21
+  ],
+  "frames": 6,
+  "files": [
+   "sprites/bosses/hive-eye-0.png",
+   "sprites/bosses/hive-eye-1.png",
+   "sprites/bosses/hive-eye-2.png",
+   "sprites/bosses/hive-eye-3.png",
+   "sprites/bosses/hive-eye-4.png",
+   "sprites/bosses/hive-eye-5.png"
+  ],
+  "strip": "sprites/bosses/hive-eye-strip.png"
+ },
+ "horn": {
+  "category": "hero-shots",
+  "size": [
+   6,
+   5
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/hero-shots/horn-0.png",
+   "sprites/hero-shots/horn-1.png"
+  ],
+  "strip": "sprites/hero-shots/horn-strip.png"
+ },
+ "hot-foot": {
+  "category": "items",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/items/hot-foot.png"
+  ]
+ },
+ "hot-lead": {
+  "category": "items",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/items/hot-lead.png"
+  ]
+ },
+ "ice-laser": {
+  "category": "projectiles",
+  "size": [
+   3,
+   3
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/projectiles/ice-laser.png"
+  ]
+ },
+ "iron-jaw": {
+  "category": "items",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/items/iron-jaw.png"
+  ]
+ },
+ "laser": {
+  "category": "projectiles",
+  "size": [
+   3,
+   3
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/projectiles/laser.png"
+  ]
+ },
+ "laser-eye": {
+  "category": "items",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/items/laser-eye.png"
+  ]
+ },
+ "lock": {
+  "category": "ui",
+  "size": [
+   8,
+   9
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/ui/lock.png"
+  ]
+ },
+ "logo": {
+  "category": "ui",
+  "size": [
+   50,
+   15
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/ui/logo.png"
+  ]
+ },
+ "long-neck": {
+  "category": "items",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/items/long-neck.png"
+  ]
+ },
+ "lucky-claw": {
+  "category": "items",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/items/lucky-claw.png"
+  ]
+ },
+ "magma": {
+  "category": "projectiles",
+  "size": [
+   3,
+   3
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/projectiles/magma.png"
+  ]
+ },
+ "magma-core": {
+  "category": "items",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/items/magma-core.png"
+  ]
+ },
+ "magnet": {
+  "category": "items",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/items/magnet.png"
+  ]
+ },
+ "med-kit": {
+  "category": "items",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/items/med-kit.png"
+  ]
+ },
+ "medal": {
+  "category": "ui",
+  "size": [
+   9,
+   10
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/ui/medal.png"
+  ]
+ },
+ "medal-off": {
+  "category": "ui",
+  "size": [
+   9,
+   10
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/ui/medal-off.png"
+  ]
+ },
+ "meteor": {
+  "category": "projectiles",
+  "size": [
+   9,
+   9
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/projectiles/meteor-0.png",
+   "sprites/projectiles/meteor-1.png"
+  ],
+  "strip": "sprites/projectiles/meteor-strip.png"
+ },
+ "meteor-call": {
+  "category": "items",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/items/meteor-call.png"
+  ]
+ },
+ "mine": {
+  "category": "projectiles",
+  "size": [
+   8,
+   7
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/projectiles/mine-0.png",
+   "sprites/projectiles/mine-1.png"
+  ],
+  "strip": "sprites/projectiles/mine-strip.png"
+ },
+ "mine-burst": {
+  "category": "items",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/items/mine-burst.png"
+  ]
+ },
+ "mine-layer": {
+  "category": "items",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/items/mine-layer.png"
+  ]
+ },
+ "mini-missile": {
+  "category": "projectiles",
+  "size": [
+   5,
+   5
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/projectiles/mini-missile.png"
+  ]
+ },
+ "mire-queen": {
+  "category": "bosses",
+  "size": [
+   26,
+   22
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/bosses/mire-queen-0.png",
+   "sprites/bosses/mire-queen-1.png"
+  ],
+  "strip": "sprites/bosses/mire-queen-strip.png"
+ },
+ "missile": {
+  "category": "projectiles",
+  "size": [
+   6,
+   6
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/projectiles/missile.png"
+  ]
+ },
+ "mite": {
+  "category": "enemies",
+  "size": [
+   8,
+   7
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/enemies/mite-0.png",
+   "sprites/enemies/mite-1.png"
+  ],
+  "strip": "sprites/enemies/mite-strip.png"
+ },
+ "mole": {
+  "category": "enemies",
+  "size": [
+   15,
+   12
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/enemies/mole-0.png",
+   "sprites/enemies/mole-1.png"
+  ],
+  "strip": "sprites/enemies/mole-strip.png"
+ },
+ "moss-pouch": {
+  "category": "items",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/items/moss-pouch.png"
+  ]
+ },
+ "mound": {
+  "category": "props",
+  "size": [
+   12,
+   7
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/props/mound-0.png",
+   "sprites/props/mound-1.png"
+  ],
+  "strip": "sprites/props/mound-strip.png"
+ },
+ "mound-big": {
+  "category": "props",
+  "size": [
+   20,
+   9
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/props/mound-big-0.png",
+   "sprites/props/mound-big-1.png"
+  ],
+  "strip": "sprites/props/mound-big-strip.png"
+ },
+ "needle": {
+  "category": "enemy-shots",
+  "size": [
+   5,
+   5
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/enemy-shots/needle-0.png",
+   "sprites/enemy-shots/needle-1.png"
+  ],
+  "strip": "sprites/enemy-shots/needle-strip.png"
+ },
+ "orb": {
+  "category": "enemy-shots",
+  "size": [
+   6,
+   6
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/enemy-shots/orb-0.png",
+   "sprites/enemy-shots/orb-1.png"
+  ],
+  "strip": "sprites/enemy-shots/orb-strip.png"
+ },
+ "p-ashpile": {
+  "category": "props",
+  "size": [
+   8,
+   4
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/props/p-ashpile.png"
+  ]
+ },
+ "p-basalt": {
+  "category": "props",
+  "size": [
+   7,
+   5
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/props/p-basalt.png"
+  ]
+ },
+ "p-bloom": {
+  "category": "props",
+  "size": [
+   5,
+   5
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/props/p-bloom.png"
+  ]
+ },
+ "p-bone": {
+  "category": "props",
+  "size": [
+   7,
+   3
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/props/p-bone.png"
+  ]
+ },
+ "p-fern": {
+  "category": "props",
+  "size": [
+   9,
+   7
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/props/p-fern.png"
+  ]
+ },
+ "p-mossrock": {
+  "category": "props",
+  "size": [
+   8,
+   6
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/props/p-mossrock.png"
+  ]
+ },
+ "p-obsidian": {
+  "category": "props",
+  "size": [
+   8,
+   6
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/props/p-obsidian.png"
+  ]
+ },
+ "p-ribs": {
+  "category": "props",
+  "size": [
+   12,
+   5
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/props/p-ribs.png"
+  ]
+ },
+ "p-rock": {
+  "category": "props",
+  "size": [
+   7,
+   5
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/props/p-rock.png"
+  ]
+ },
+ "p-skull": {
+  "category": "props",
+  "size": [
+   10,
+   6
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/props/p-skull.png"
+  ]
+ },
+ "p-tuft": {
+  "category": "props",
+  "size": [
+   5,
+   4
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/props/p-tuft.png"
+  ]
+ },
+ "p-tuft-dim": {
+  "category": "props",
+  "size": [
+   5,
+   3
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/props/p-tuft-dim.png"
+  ]
+ },
+ "pachy": {
+  "category": "heroes",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/heroes/pachy-0.png",
+   "sprites/heroes/pachy-1.png"
+  ],
+  "strip": "sprites/heroes/pachy-strip.png"
+ },
+ "pachy-idle": {
+  "category": "heroes",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/heroes/pachy-idle-0.png",
+   "sprites/heroes/pachy-idle-1.png"
+  ],
+  "strip": "sprites/heroes/pachy-idle-strip.png"
+ },
+ "pebble": {
+  "category": "hero-shots",
+  "size": [
+   6,
+   6
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/hero-shots/pebble-0.png",
+   "sprites/hero-shots/pebble-1.png"
+  ],
+  "strip": "sprites/hero-shots/pebble-strip.png"
+ },
+ "pellet": {
+  "category": "projectiles",
+  "size": [
+   4,
+   4
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/projectiles/pellet.png"
+  ]
+ },
+ "pinball": {
+  "category": "projectiles",
+  "size": [
+   6,
+   6
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/projectiles/pinball.png"
+  ]
+ },
+ "plasma-rang": {
+  "category": "projectiles",
+  "size": [
+   8,
+   8
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/projectiles/plasma-rang-0.png",
+   "sprites/projectiles/plasma-rang-1.png"
+  ],
+  "strip": "sprites/projectiles/plasma-rang-strip.png"
+ },
+ "powder-keg": {
+  "category": "items",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/items/powder-keg.png"
+  ]
+ },
+ "ptera": {
+  "category": "heroes",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/heroes/ptera-0.png",
+   "sprites/heroes/ptera-1.png"
+  ],
+  "strip": "sprites/heroes/ptera-strip.png"
+ },
+ "ptera-idle": {
+  "category": "heroes",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/heroes/ptera-idle-0.png",
+   "sprites/heroes/ptera-idle-1.png"
+  ],
+  "strip": "sprites/heroes/ptera-idle-strip.png"
+ },
+ "ptero": {
+  "category": "enemies",
+  "size": [
+   17,
+   11
+  ],
+  "frames": 4,
+  "files": [
+   "sprites/enemies/ptero-0.png",
+   "sprites/enemies/ptero-1.png",
+   "sprites/enemies/ptero-2.png",
+   "sprites/enemies/ptero-3.png"
+  ],
+  "strip": "sprites/enemies/ptero-strip.png"
+ },
+ "puffer": {
+  "category": "enemies",
+  "size": [
+   14,
+   14
+  ],
+  "frames": 3,
+  "files": [
+   "sprites/enemies/puffer-0.png",
+   "sprites/enemies/puffer-1.png",
+   "sprites/enemies/puffer-2.png"
+  ],
+  "strip": "sprites/enemies/puffer-strip.png"
+ },
+ "quill": {
+  "category": "projectiles",
+  "size": [
+   5,
+   5
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/projectiles/quill.png"
+  ]
+ },
+ "quill-burst": {
+  "category": "items",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/items/quill-burst.png"
+  ]
+ },
+ "railgun": {
+  "category": "items",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/items/railgun.png"
+  ]
+ },
+ "rang": {
+  "category": "projectiles",
+  "size": [
+   8,
+   8
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/projectiles/rang-0.png",
+   "sprites/projectiles/rang-1.png"
+  ],
+  "strip": "sprites/projectiles/rang-strip.png"
+ },
+ "raptor": {
+  "category": "heroes",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/heroes/raptor-0.png",
+   "sprites/heroes/raptor-1.png"
+  ],
+  "strip": "sprites/heroes/raptor-strip.png"
+ },
+ "raptor-idle": {
+  "category": "heroes",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/heroes/raptor-idle-0.png",
+   "sprites/heroes/raptor-idle-1.png"
+  ],
+  "strip": "sprites/heroes/raptor-idle-strip.png"
+ },
+ "raptor-legs": {
+  "category": "items",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/items/raptor-legs.png"
+  ]
+ },
+ "rex": {
+  "category": "heroes",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/heroes/rex-0.png",
+   "sprites/heroes/rex-1.png"
+  ],
+  "strip": "sprites/heroes/rex-strip.png"
+ },
+ "rex-idle": {
+  "category": "heroes",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/heroes/rex-idle-0.png",
+   "sprites/heroes/rex-idle-1.png"
+  ],
+  "strip": "sprites/heroes/rex-idle-strip.png"
+ },
+ "rubber-ball": {
+  "category": "items",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/items/rubber-ball.png"
+  ]
+ },
+ "sandmaw": {
+  "category": "bosses",
+  "size": [
+   22,
+   21
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/bosses/sandmaw-0.png",
+   "sprites/bosses/sandmaw-1.png"
+  ],
+  "strip": "sprites/bosses/sandmaw-strip.png"
+ },
+ "saw": {
+  "category": "projectiles",
+  "size": [
+   9,
+   9
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/projectiles/saw-0.png",
+   "sprites/projectiles/saw-1.png"
+  ],
+  "strip": "sprites/projectiles/saw-strip.png"
+ },
+ "saw-ring": {
+  "category": "items",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/items/saw-ring.png"
+  ]
+ },
+ "scattergun": {
+  "category": "items",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/items/scattergun.png"
+  ]
+ },
+ "seeker-pod": {
+  "category": "items",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/items/seeker-pod.png"
+  ]
+ },
+ "shard": {
+  "category": "enemy-shots",
+  "size": [
+   5,
+   5
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/enemy-shots/shard-0.png",
+   "sprites/enemy-shots/shard-1.png"
+  ],
+  "strip": "sprites/enemy-shots/shard-strip.png"
+ },
+ "sharp-tooth": {
+  "category": "items",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/items/sharp-tooth.png"
+  ]
+ },
+ "shellback": {
+  "category": "enemies",
+  "size": [
+   17,
+   11
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/enemies/shellback-0.png",
+   "sprites/enemies/shellback-1.png"
+  ],
+  "strip": "sprites/enemies/shellback-strip.png"
+ },
+ "shrapnel": {
+  "category": "items",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/items/shrapnel.png"
+  ]
+ },
+ "skull": {
+  "category": "ui",
+  "size": [
+   8,
+   8
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/ui/skull.png"
+  ]
+ },
+ "slime": {
+  "category": "enemies",
+  "size": [
+   14,
+   12
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/enemies/slime-0.png",
+   "sprites/enemies/slime-1.png"
+  ],
+  "strip": "sprites/enemies/slime-strip.png"
+ },
+ "slimelet": {
+  "category": "enemies",
+  "size": [
+   10,
+   8
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/enemies/slimelet-0.png",
+   "sprites/enemies/slimelet-1.png"
+  ],
+  "strip": "sprites/enemies/slimelet-strip.png"
+ },
+ "slug": {
+  "category": "projectiles",
+  "size": [
+   6,
+   6
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/projectiles/slug-0.png",
+   "sprites/projectiles/slug-1.png"
+  ],
+  "strip": "sprites/projectiles/slug-strip.png"
+ },
+ "spark": {
+  "category": "items",
+  "size": [
+   5,
+   5
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/items/spark-0.png",
+   "sprites/items/spark-1.png"
+  ],
+  "strip": "sprites/items/spark-strip.png"
+ },
+ "spark-plug": {
+  "category": "items",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/items/spark-plug.png"
+  ]
+ },
+ "spike": {
+  "category": "hero-shots",
+  "size": [
+   5,
+   6
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/hero-shots/spike-0.png",
+   "sprites/hero-shots/spike-1.png"
+  ],
+  "strip": "sprites/hero-shots/spike-strip.png"
+ },
+ "spino": {
+  "category": "heroes",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/heroes/spino-0.png",
+   "sprites/heroes/spino-1.png"
+  ],
+  "strip": "sprites/heroes/spino-strip.png"
+ },
+ "spino-idle": {
+  "category": "heroes",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/heroes/spino-idle-0.png",
+   "sprites/heroes/spino-idle-1.png"
+  ],
+  "strip": "sprites/heroes/spino-idle-strip.png"
+ },
+ "spit": {
+  "category": "enemy-shots",
+  "size": [
+   5,
+   5
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/enemy-shots/spit.png"
+  ]
+ },
+ "spore": {
+  "category": "enemy-shots",
+  "size": [
+   5,
+   5
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/enemy-shots/spore-0.png",
+   "sprites/enemy-shots/spore-1.png"
+  ],
+  "strip": "sprites/enemy-shots/spore-strip.png"
+ },
+ "spore-pod": {
+  "category": "items",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/items/spore-pod.png"
+  ]
+ },
+ "starfall": {
+  "category": "items",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/items/starfall.png"
+  ]
+ },
+ "static-coil": {
+  "category": "items",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/items/static-coil.png"
+  ]
+ },
+ "stego": {
+  "category": "heroes",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/heroes/stego-0.png",
+   "sprites/heroes/stego-1.png"
+  ],
+  "strip": "sprites/heroes/stego-strip.png"
+ },
+ "stego-idle": {
+  "category": "heroes",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/heroes/stego-idle-0.png",
+   "sprites/heroes/stego-idle-1.png"
+  ],
+  "strip": "sprites/heroes/stego-idle-strip.png"
+ },
+ "storm-cell": {
+  "category": "items",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/items/storm-cell.png"
+  ]
+ },
+ "tab-dot": {
+  "category": "ui",
+  "size": [
+   4,
+   4
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/ui/tab-dot.png"
+  ]
+ },
+ "tail-club": {
+  "category": "items",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/items/tail-club.png"
+  ]
+ },
+ "tar": {
+  "category": "projectiles",
+  "size": [
+   3,
+   3
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/projectiles/tar.png"
+  ]
+ },
+ "target-lock": {
+  "category": "items",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/items/target-lock.png"
+  ]
+ },
+ "tesla-rod": {
+  "category": "items",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/items/tesla-rod.png"
+  ]
+ },
+ "thorn-hide": {
+  "category": "items",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/items/thorn-hide.png"
+  ]
+ },
+ "trike": {
+  "category": "heroes",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/heroes/trike-0.png",
+   "sprites/heroes/trike-1.png"
+  ],
+  "strip": "sprites/heroes/trike-strip.png"
+ },
+ "trike-idle": {
+  "category": "heroes",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/heroes/trike-idle-0.png",
+   "sprites/heroes/trike-idle-1.png"
+  ],
+  "strip": "sprites/heroes/trike-idle-strip.png"
+ },
+ "turtle-shell": {
+  "category": "items",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/items/turtle-shell.png"
+  ]
+ },
+ "twin-barrel": {
+  "category": "items",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/items/twin-barrel.png"
+  ]
+ },
+ "up-bones": {
+  "category": "upgrades",
+  "size": [
+   12,
+   12
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/upgrades/up-bones.png"
+  ]
+ },
+ "up-crit": {
+  "category": "upgrades",
+  "size": [
+   12,
+   10
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/upgrades/up-crit.png"
+  ]
+ },
+ "up-damage": {
+  "category": "upgrades",
+  "size": [
+   12,
+   12
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/upgrades/up-damage.png"
+  ]
+ },
+ "up-dash": {
+  "category": "upgrades",
+  "size": [
+   12,
+   9
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/upgrades/up-dash.png"
+  ]
+ },
+ "up-hp": {
+  "category": "upgrades",
+  "size": [
+   12,
+   12
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/upgrades/up-hp.png"
+  ]
+ },
+ "up-pickup": {
+  "category": "upgrades",
+  "size": [
+   12,
+   11
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/upgrades/up-pickup.png"
+  ]
+ },
+ "up-rate": {
+  "category": "upgrades",
+  "size": [
+   12,
+   12
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/upgrades/up-rate.png"
+  ]
+ },
+ "up-speed": {
+  "category": "upgrades",
+  "size": [
+   12,
+   12
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/upgrades/up-speed.png"
+  ]
+ },
+ "up-xp": {
+  "category": "upgrades",
+  "size": [
+   12,
+   11
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/upgrades/up-xp.png"
+  ]
+ },
+ "war-drum": {
+  "category": "items",
+  "size": [
+   16,
+   16
+  ],
+  "frames": 1,
+  "files": [
+   "sprites/items/war-drum.png"
+  ]
+ },
+ "warn": {
+  "category": "ui",
+  "size": [
+   7,
+   7
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/ui/warn-0.png",
+   "sprites/ui/warn-1.png"
+  ],
+  "strip": "sprites/ui/warn-strip.png"
+ },
+ "wisp": {
+  "category": "enemies",
+  "size": [
+   13,
+   14
+  ],
+  "frames": 2,
+  "files": [
+   "sprites/enemies/wisp-0.png",
+   "sprites/enemies/wisp-1.png"
+  ],
+  "strip": "sprites/enemies/wisp-strip.png"
+ },
+ "wraith": {
+  "category": "bosses",
+  "size": [
+   24,
+   22
+  ],
+  "frames": 3,
+  "files": [
+   "sprites/bosses/wraith-0.png",
+   "sprites/bosses/wraith-1.png",
+   "sprites/bosses/wraith-2.png"
+  ],
+  "strip": "sprites/bosses/wraith-strip.png"
+ }
+}

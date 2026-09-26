@@ -1,0 +1,430 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>trex · a roguelite that runs in your terminal</title>
+  <meta name="description" content="trex is a pixel roguelite that renders inside your terminal with kitty graphics. Split a tmux pane, type trex, and survive while your agent works.">
+  <meta name="theme-color" content="#0f0b18">
+  <meta name="color-scheme" content="dark">
+  <link rel="canonical" href="https://ghandhitechnology.github.io/trex/">
+
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="trex">
+  <meta property="og:title" content="trex · survive the build">
+  <meta property="og:description" content="A pixel roguelite that runs inside your terminal. Split a tmux pane, type trex, play while your agent works.">
+  <meta property="og:url" content="https://ghandhitechnology.github.io/trex/">
+  <meta property="og:image" content="https://ghandhitechnology.github.io/trex/assets/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="The TREX logo over a swarm of pixel monsters in a tmux pane">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="trex · survive the build">
+  <meta name="twitter:description" content="A pixel roguelite that runs inside your terminal.">
+  <meta name="twitter:image" content="https://ghandhitechnology.github.io/trex/assets/og.png">
+
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&display=swap">
+  <link rel="stylesheet" href="assets/palette.css">
+  <link rel="stylesheet" href="css/site.css">
+  <link rel="preload" as="image" href="assets/video/reel.png">
+  <link rel="preload" as="image" href="assets/sprites/atlas.png">
+  <script>document.documentElement.classList.add('js');</script>
+  <script src="js/pixelfont.js"></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="gh" viewBox="0 0 16 16"><path fill="currentColor" shape-rendering="crispEdges" d="M5 0h6v1h-6zM3 1h10v1h-10zM2 2h12v1h-12zM1 3h3v1h-3zM5 3h6v1h-6zM12 3h3v1h-3zM1 4h3v1h-3zM12 4h3v1h-3zM0 5h3v1h-3zM13 5h3v1h-3zM0 6h3v1h-3zM13 6h3v1h-3zM0 7h3v1h-3zM13 7h3v1h-3zM0 8h3v1h-3zM13 8h3v1h-3zM0 9h4v1h-4zM12 9h4v1h-4zM0 10h5v1h-5zM11 10h5v1h-5zM1 11h2v1h-2zM4 11h2v1h-2zM10 11h5v1h-5zM1 12h3v1h-3zM10 12h5v1h-5zM2 13h4v1h-4zM10 13h4v1h-4zM3 14h3v1h-3zM10 14h3v1h-3zM5 15h1v1h-1zM10 15h1v1h-1z"/></symbol>
+  <symbol id="star" viewBox="0 0 9 9"><path fill="currentColor" shape-rendering="crispEdges" d="M4 0h1v1h-1zM4 1h1v1h-1zM3 2h3v1h-3zM0 3h9v1h-9zM1 4h7v1h-7zM2 5h5v1h-5zM2 6h2v1h-2zM5 6h2v1h-2zM1 7h2v1h-2zM6 7h2v1h-2zM1 8h1v1h-1zM7 8h1v1h-1z"/></symbol>
+</svg>
+
+<header class="nav">
+  <div class="wrap nav-in">
+    <a class="nav-logo" href="#top" aria-label="trex home"><img src="assets/sprites/ui/logo.png" alt="" width="100" height="30"></a>
+    <nav aria-label="Sections">
+      <ul class="nav-links">
+        <li><a href="#run">Run</a></li>
+        <li><a href="#heroes">Dinos</a></li>
+        <li><a href="#builds">Builds</a></li>
+        <li><a href="#bestiary">Bestiary</a></li>
+        <li><a href="#setup">Setup</a></li>
+      </ul>
+    </nav>
+    <div class="nav-hud">
+      <div class="kills" aria-live="polite" title="Critters squashed on this page">
+        <span class="kills-ico"></span>
+        <span class="kills-n">0</span>
+      </div>
+      <a class="btn btn--sm" data-burst href="https://github.com/ghandhitechnology/trex" rel="noopener">
+        <svg aria-hidden="true"><use href="#gh"/></svg><span>GitHub</span>
+      </a>
+    </div>
+  </div>
+  <div class="xp" aria-hidden="true"><div class="xp-fill"></div></div>
+</header>
+
+<main id="main">
+<!-- ============ HERO ============ -->
+<section class="hero" id="top">
+  <div class="floor" aria-hidden="true"></div>
+  <div class="floor-lit" aria-hidden="true"></div>
+  <div class="props" aria-hidden="true"></div>
+
+  <div class="wrap hero-in">
+    <h1 data-px data-px-bands data-px-depth="1">Survive the build.</h1>
+    <script>PX.render(document.querySelector('.hero h1'));</script>
+    <div class="hero-row">
+      <p class="lede">A pixel roguelite that runs <span class="hl">inside your terminal</span>. Split a tmux pane, type <b>trex</b>, and play while your agent works.</p>
+      <div class="cta">
+        <a class="btn" data-burst href="https://github.com/ghandhitechnology/trex" rel="noopener">
+          <svg aria-hidden="true"><use href="#gh"/></svg><span>Star on GitHub</span><span class="stars" hidden><svg class="star" aria-hidden="true"><use href="#star"/></svg><b class="stars-n"></b></span>
+        </a>
+        <div class="install">
+          <code title="cargo install --git https://github.com/ghandhitechnology/trex"><span class="sigil">$</span>cargo install --git <span class="url">https://github.com/ghandhitechnology/trex</span><span class="url-s">…/trex</span></code>
+          <button class="copy" type="button" data-copy="cargo install --git https://github.com/ghandhitechnology/trex" aria-label="Copy install command">Copy</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="stage">
+      <div class="term">
+        <div class="term-bar"><i class="dot"></i><i class="dot"></i><i class="dot"></i><span class="term-title">tmux · ~/api</span></div>
+        <div class="term-body">
+          <div class="pane pane-agent" aria-hidden="true"><pre class="agent-log"></pre></div>
+          <div class="tborder" aria-hidden="true"></div>
+          <div class="pane pane-trex">
+            <div class="shell" aria-hidden="true"><span class="path">~/api</span> <span class="caret">❯</span> <span class="typed"></span><span class="cursor"></span></div>
+            <div class="screen">
+              <img class="poster" src="assets/video/reel.png" alt="trex gameplay: a green dinosaur holding off a swarm of pixel monsters" width="256" height="144">
+              <video class="reel" muted loop playsinline preload="metadata" poster="assets/video/reel.png" aria-hidden="true">
+                <source src="assets/video/reel.mp4" type="video/mp4">
+              </video>
+              <canvas class="arena" width="256" height="144" tabindex="-1" aria-label="Playable demo. WASD or arrow keys move, Space dashes, Q quits."></canvas>
+              <div class="stamp" aria-hidden="true">
+                <div class="stamp-box"><span class="stamp-t" data-px>Paused</span><span class="stamp-s">focus-out · 8 fps</span></div>
+              </div>
+              <div class="pane-hint" aria-hidden="true"><span class="fine">WASD move · Space dash · Q quit</span><span class="touch">Tap and hold to move · Double-tap to dash</span></div>
+              <button class="takeover" type="button"><i></i><span class="fine">Click the pane to take over</span><span class="touch">Tap to take over</span></button>
+            </div>
+          </div>
+        </div>
+        <div class="tmux-status" aria-hidden="true"><span>[api]</span><span class="win">0:zsh</span><span class="win cur">1:dev*</span><span class="spacer"></span><span class="focus-tag">trex</span><span class="host">"mbp"</span><span class="clock">00:00</span></div>
+        <div class="term-tag" aria-hidden="true">Real gameplay · 256×144</div>
+      </div>
+    </div>
+    <script>
+    (function () {
+      // Size the game pane to a whole multiple of 256x144 device pixels before the first paint.
+      var term = document.querySelector('.term'), body = term.querySelector('.term-body'),
+        pane = term.querySelector('.pane-trex'), screen = pane.querySelector('.screen'),
+        border = term.querySelector('.tborder'), narrow = matchMedia('(max-width: 900px)'), seen = '';
+      function fit(w, h) {
+        var d = window.devicePixelRatio || 1, k = Math.max(1, Math.floor(Math.min(w * d / 256, h * d / 144) + 1e-6));
+        return { w: k * 256 / d, h: k * 144 / d };
+      }
+      window.trexHeroFit = function () {
+        var key = innerWidth + 'x' + innerHeight + '@' + (window.devicePixelRatio || 1), f;
+        if (key === seen) return;
+        seen = key;
+        if (narrow.matches) {
+          pane.style.width = pane.style.height = '';
+          f = fit(body.clientWidth, innerHeight * 0.62);
+          screen.style.setProperty('--gw', f.w + 'px');
+          screen.style.setProperty('--gh', f.h + 'px');
+          return;
+        }
+        screen.style.removeProperty('--gw');
+        screen.style.removeProperty('--gh');
+        var top = 0;
+        for (var el = term; el; el = el.offsetParent) top += el.offsetTop;
+        f = fit(body.clientWidth - 300 - border.offsetWidth, Math.max(innerHeight - top - 66, 300));
+        pane.style.width = f.w + 'px';
+        pane.style.height = f.h + 'px';
+      };
+      window.trexHeroFit();
+    })();
+    </script>
+  </div>
+</section>
+
+<!-- ============ MARQUEE ============ -->
+<div class="marquee" aria-hidden="true"><div class="marquee-track"></div></div>
+
+<!-- ============ RUN ============ -->
+<section class="sec" id="run">
+  <div class="wrap">
+    <div class="head-run" data-reveal>
+      <h2 data-px>Minute one is quiet. <em>Minute fifteen isn't.</em></h2>
+      <p>The floor turns over every two and a half minutes. A boss walks in every three. Your build stacks the whole way down.</p>
+    </div>
+    <div class="run" data-reveal style="--d:1">
+      <div class="run-main">
+        <div class="screen-frame px-frame">
+          <div class="vid" data-fit="run">
+            <img class="run-poster" src="assets/video/early.png" alt="" width="256" height="144">
+            <video class="run-video" muted playsinline preload="none" poster="assets/video/early.png"></video>
+            <div class="swap"></div>
+          </div>
+          <div class="cap"><span><i class="live"></i><span class="run-label">0:23 · First picks</span></span><span class="dim run-where">Tar Pits</span></div>
+        </div>
+        <div class="route">
+          <div class="route-bosses" aria-hidden="true"></div>
+          <div class="route-floors" aria-hidden="true"></div>
+          <div class="track">
+            <div class="track-bar"></div>
+            <div class="track-fill"></div>
+            <div class="track-marks" role="group" aria-label="Clips"></div>
+          </div>
+          <div class="track-ticks" aria-hidden="true"><span>0:00</span><span>3:00</span><span>6:00</span><span>9:00</span><span>12:00</span><span>15:00</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ HEROES ============ -->
+<section class="sec sec--alt" id="heroes">
+  <div class="wrap">
+    <div class="hub px-frame" data-reveal tabindex="-1">
+      <div class="hub-bg" aria-hidden="true"></div>
+      <div class="hub-top" aria-hidden="true"><span>Heroes</span><span class="hub-bones"><span class="hb-ico"></span>310</span></div>
+      <div class="head-hub">
+        <h2 data-px>Seven dinos. <em>One bad day.</em></h2>
+        <p>Each dino brings its own shot and a trick that fires on dash, hit, hurt or crit. Rex is free. The rest cost bones or a feat.</p>
+      </div>
+      <ul class="tiles" role="tablist" aria-label="Pick a dino"></ul>
+      <div class="hub-main" role="tabpanel" aria-live="polite">
+        <div class="hub-dino"><div class="shadow"></div></div>
+        <div class="hub-info">
+          <div class="hub-name"><h3 data-px class="hub-title">Rex</h3><span class="hub-unlock"></span></div>
+          <p class="hub-desc"></p>
+          <div class="stats">
+            <div class="stat"><span>HP</span><span class="hearts"></span></div>
+            <div class="stat"><span>SPD</span><span class="bar" data-k="spd"></span></div>
+            <div class="stat"><span>PWR</span><span class="bar" data-k="pwr"></span></div>
+            <div class="stat"><span>RNG</span><span class="bar" data-k="rng"></span></div>
+          </div>
+        </div>
+        <figure class="hub-range">
+          <div class="range-screen px-frame"><canvas class="range" width="128" height="72" aria-hidden="true"></canvas></div>
+          <figcaption class="hub-weapon"></figcaption>
+        </figure>
+      </div>
+      <p class="hub-keys kbd-hint" aria-hidden="true"><kbd>A</kbd> <kbd>D</kbd> PICK · CLICK A TILE</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ BUILDS ============ -->
+<section class="sec" id="builds">
+  <div class="wrap">
+    <div class="head-lvl" data-reveal>
+      <div class="lvl-banner"><span class="lvl-gem"></span><h2 data-px data-px-bands>Every run builds <em>different.</em></h2><span class="lvl-gem"></span></div>
+      <p>54 items stack and collide. Hold the right pair and a synergy switches on. Take a card and see where your build goes.</p>
+    </div>
+    <div class="builds">
+      <div class="deal px-frame" data-reveal style="--d:1">
+        <div class="deal-top"><h3 data-px>Level up</h3><button class="link-btn deal-reset" type="button">Reset run</button></div>
+        <div class="cards" role="group" aria-label="Pick one item"></div>
+        <div class="tray" aria-label="Your build"><span class="empty">Your build is empty. Take a card.</span></div>
+        <div class="deal-foot"><span class="kbd-hint">1 2 3 take · R reroll</span><button class="link-btn deal-reroll" type="button">Reroll</button></div>
+      </div>
+      <div data-reveal style="--d:2">
+        <div class="syn-head"><span>Synergies</span><span><b class="syn-count">0</b> / <span class="syn-total">12</span> on</span></div>
+        <ul class="syns"></ul>
+      </div>
+    </div>
+    <div class="armory" data-reveal>
+      <p class="armory-title"><b>Armory</b><span>All 54 items. Hover for details, click one to add it to your build.</span><span class="legend" aria-hidden="true"><i class="common"></i>Common<i class="rare"></i>Rare<i class="epic"></i>Epic</span></p>
+      <div class="armory-groups"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ BESTIARY ============ -->
+<section class="sec sec--boss" id="bestiary">
+  <div class="hazard" aria-hidden="true"><div class="hazard-track"></div></div>
+  <div class="wrap">
+    <div class="head-boss" data-reveal>
+      <h2 data-px>Things that want <em>you dead.</em></h2>
+      <p>18 enemies, 5 bosses, 8 stages. A boss every three minutes, a new floor every two and a half, and it never runs out.</p>
+    </div>
+    <div class="bosses" data-reveal></div>
+    <div class="spawn" data-reveal>
+      <div class="spawn-head"><span>Spawn table</span><span class="spawn-clock">0:00</span></div>
+      <div class="spawn-scroll">
+        <div class="spawn-band">
+          <div class="spawn-stages"></div>
+          <div class="spawn-lanes"></div>
+          <div class="spawn-axis"><span>0:00</span><span>3:00</span><span>6:00</span><span>9:00</span><span>12:00</span><span>15:00</span></div>
+          <div class="spawn-head-line"></div>
+        </div>
+      </div>
+      <div class="readout px-frame" aria-live="polite">
+        <div class="ro-fig"></div>
+        <div class="ro-info">
+          <span class="ro-new">New enemy</span>
+          <h3 class="ro-name" data-px>Grub</h3>
+          <p class="ro-desc"></p>
+          <p class="ro-stats"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CONTROLS ============ -->
+<section class="sec sec--alt sec--tight" id="controls">
+  <div class="wrap controls">
+    <div class="ctrl-copy" data-reveal>
+      <h2 data-px>WASD. Space. <em>Done.</em></h2>
+      <p><code>P</code> pauses. <code>Q</code> quits and banks the run.</p>
+      <button class="btn btn--ghost btn--sm play-up" type="button">Play it in the pane up top</button>
+      <details class="nerd">
+        <summary>Why movement feels smooth in tmux</summary>
+        <p>tmux never reports key release, so trex reads key repeat with a short hold window and smooths your velocity.</p>
+      </details>
+    </div>
+    <div class="keys" data-reveal style="--d:1" aria-hidden="true">
+      <div class="kpad">
+        <span class="key" data-key="w">W</span>
+        <span class="key" data-key="a">A</span>
+        <span class="key" data-key="s">S</span>
+        <span class="key" data-key="d">D</span>
+      </div>
+      <span class="key wide gold" data-key=" ">SPACE<small>DASH · ACTIVE</small></span>
+      <div class="krow">
+        <span class="key" data-key="p">P</span>
+        <span class="key" data-key="q">Q</span>
+      </div>
+    </div>
+    <p class="keys-line" aria-hidden="true"><span><kbd>WASD</kbd> move</span><span><kbd>SPACE</kbd> dash</span><span><kbd>P</kbd> pause</span><span><kbd>Q</kbd> quit</span></p>
+  </div>
+</section>
+
+<!-- ============ SETUP ============ -->
+<section class="sec" id="setup">
+  <div class="wrap">
+    <div class="head-setup" data-reveal>
+      <p class="prompt" aria-hidden="true"><span class="path">~</span> <span class="caret">❯</span> trex --help<span class="cursor"></span></p>
+      <h2 data-px>Install, split, <em>play.</em></h2>
+      <p>One Rust binary. Ghostty or Kitty to draw it. tmux if you want it next to your work, which you do.</p>
+    </div>
+    <div class="setup">
+      <ol class="setup-steps">
+        <li class="sstep" data-reveal>
+          <div>
+            <h3>Install</h3>
+            <p>Needs a Rust toolchain. Builds one binary called <code>trex</code>.</p>
+            <div class="code"><div class="code-bar"><span>shell</span><button class="copy" type="button" data-copy="cargo install --git https://github.com/ghandhitechnology/trex">Copy</button></div>
+<pre><span class="s">$ </span>cargo install --git \
+    https://github.com/ghandhitechnology/trex</pre></div>
+          </div>
+        </li>
+        <li class="sstep" data-reveal style="--d:1">
+          <div>
+            <h3>Let tmux pass pixels</h3>
+            <p>Passthrough lets kitty graphics out of tmux. Focus events let trex pause when you leave the pane. No tmux? Skip this one.</p>
+            <div class="code"><div class="code-bar"><span>~/.tmux.conf</span><button class="copy" type="button" data-copy="set -g allow-passthrough on&#10;set -g focus-events on">Copy</button></div>
+<pre><span class="k">set</span> -g allow-passthrough <span class="v">on</span>
+<span class="k">set</span> -g focus-events <span class="v">on</span></pre></div>
+          </div>
+        </li>
+        <li class="sstep" data-reveal style="--d:2">
+          <div>
+            <h3>Split and play</h3>
+            <p>Opens trex in a pane beside whatever is running. <code>Q</code> quits and banks the run.</p>
+            <div class="code"><div class="code-bar"><span>shell</span><button class="copy" type="button" data-copy="tmux split-window -h trex">Copy</button></div>
+<pre><span class="s">$ </span>tmux split-window -h trex</pre></div>
+          </div>
+        </li>
+      </ol>
+      <div class="setup-right">
+      <ul class="reqs" data-reveal style="--d:1">
+        <li><b>Terminal</b><span>Ghostty or Kitty. Anything that speaks kitty graphics with Unicode placeholders.</span></li>
+        <li><b>tmux</b><span>3.3 or newer for <code>allow-passthrough</code>. Or skip tmux and run it bare.</span></li>
+        <li><b>Over SSH</b><span>Frames switch to zlib and travel inside the escape itself, at 30 fps.</span></li>
+        <li><b>Frame rate</b><span>60 fps in a run, 30 in menus, 8 when paused or unfocused.</span></li>
+        <li><b>Save</b><span><code>trex/save.ron</code> in your data dir. Bones, unlocks, feats and a best time per dino.</span></li>
+        <li><b>Sound</b><span>None. Play it on a call.</span></li>
+      </ul>
+      <figure class="setup-shot" data-reveal style="--d:2">
+        <div class="mini px-frame">
+          <div class="mini-bar"><span>~/api</span><span class="mini-cmd">tmux split-window -h trex</span></div>
+          <div class="mini-body">
+            <pre class="mini-agent" aria-hidden="true"><span class="dim">❯</span> agent "fix the flaky ledger tests"
+<span class="c">●</span> Read src/ledger/refund.rs
+<span class="c">●</span> Edit src/ledger/refund.rs <span class="g">+18</span> <span class="r">-6</span>
+<span class="c">●</span> Bash cargo test ledger
+  <span class="b">████████████░░░░</span> 309/412</pre>
+            <i class="mini-split" aria-hidden="true"></i>
+            <img class="mini-shot" src="assets/shots/title.png" alt="The trex title screen in a tmux pane" loading="lazy" width="256" height="144">
+          </div>
+        </div>
+        <figcaption>Step 3, done. Your agent on the left, trex on the right.</figcaption>
+      </figure>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FINAL CTA ============ -->
+<section class="final" id="play">
+  <div class="final-bg" aria-hidden="true">
+    <div class="final-swarm"></div>
+    <video data-lazy data-fit="cover" muted loop playsinline preload="none" poster="assets/video/late-chaos.png"><source data-src="assets/video/late-chaos.mp4" type="video/mp4"></video>
+  </div>
+  <div class="wrap final-in" data-reveal>
+    <h2 data-px class="center" data-px-depth="1">Why not have fun <em>while Claude works?</em></h2>
+    <p>Plenty of time for one more run.</p>
+    <div class="cta-row">
+      <a class="btn" data-burst href="https://github.com/ghandhitechnology/trex" rel="noopener">
+        <svg aria-hidden="true"><use href="#gh"/></svg><span>Get trex on GitHub</span>
+      </a>
+      <div class="install">
+        <code title="cargo install --git https://github.com/ghandhitechnology/trex"><span class="sigil">$</span>cargo install --git <span class="url">https://github.com/ghandhitechnology/trex</span><span class="url-s">…/trex</span></code>
+        <button class="copy" type="button" data-copy="cargo install --git https://github.com/ghandhitechnology/trex" aria-label="Copy install command">Copy</button>
+      </div>
+    </div>
+  </div>
+  <div class="horde" aria-hidden="true"><div class="horde-track"></div></div>
+</section>
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <div class="foot-in">
+      <div>
+        <img class="logo" src="assets/sprites/ui/logo.png" alt="trex" width="150" height="45">
+      </div>
+      <ul class="foot-links">
+        <li><a href="https://github.com/ghandhitechnology/trex" rel="noopener">GitHub</a></li>
+        <li><a href="https://github.com/ghandhitechnology/trex/issues" rel="noopener">Issues</a></li>
+        <li><a href="#setup">Install</a></li>
+        <li><a href="#top">Top</a></li>
+      </ul>
+    </div>
+    <div class="foot-hud" aria-hidden="true">
+      <span>Survived on this page <b class="survived">0:00</b></span>
+      <span>Best <b class="best">0:00</b></span>
+      <span>Critters squashed <b class="kills-foot">0</b></span>
+    </div>
+  </div>
+</footer>
+
+<div class="critters" aria-hidden="true"></div>
+<canvas class="fx" aria-hidden="true"></canvas>
+<div class="tip" role="tooltip" aria-hidden="true"></div>
+
+<script src="js/data.js"></script>
+<script src="js/main.js" defer></script>
+<script src="js/arena.js" defer></script>
+</body>
+</html>

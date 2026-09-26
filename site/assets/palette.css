@@ -1,0 +1,41 @@
+/* Tarpit 32: the one fixed palette from src/render/palette.rs */
+:root {
+  /* neutral */
+  --ink: #0f0b18;
+  --night: #1d1629;
+  --dusk: #2d2340;
+  --slate: #45395c;
+  --mauve: #675a7c;
+  --haze: #948aa6;
+  --fog: #c9c2d4;
+  --bone: #f5efe0;
+  /* warm */
+  --maroon: #4a1530;
+  --blood: #86203a;
+  --red: #cc3a3f;
+  --ember: #ef6b3a;
+  --amber: #f7a041;
+  --gold: #ffd25e;
+  --cream: #fff4b0;
+  /* green */
+  --deep: #0f3134;
+  --moss: #1b5a45;
+  --leaf: #2e904f;
+  --lime: #7cc84b;
+  --sprout: #cdeb72;
+  /* blue */
+  --navy: #1a2a5e;
+  --blue: #2a5aa8;
+  --sky: #3e9ce0;
+  --cyan: #74dcee;
+  --ice: #d2fbf6;
+  /* purple */
+  --plum: #3e1b58;
+  --grape: #7a36a0;
+  --pink: #da4f9e;
+  --blush: #ff99c4;
+  /* earth */
+  --umber: #52301f;
+  --clay: #955c38;
+  --sand: #dca56f;
+}
