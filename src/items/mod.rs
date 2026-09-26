@@ -113,7 +113,7 @@ impl Stat {
             Stat::Pickup => 28.0,
             Stat::XpGain => 1.0,
             Stat::Regen | Stat::Dodge => 0.0,
-            Stat::DashCooldown => 1.4,
+            Stat::DashCooldown => 1.25,
             Stat::Area | Stat::Duration => 1.0,
         }
     }

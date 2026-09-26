@@ -255,7 +255,7 @@ impl Enemy {
         self.elite = Some(elite);
         self.max_hp *= hp;
         match elite {
-            Elite::Swift => self.speed *= 1.5,
+            Elite::Swift => self.speed *= 1.35,
             Elite::Tough => self.max_hp *= 1.8,
             Elite::Shielded => self.shield_max += self.max_hp * 0.6,
             Elite::Volatile | Elite::Splitting => {}

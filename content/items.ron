@@ -10,7 +10,7 @@
         weapon: (
             kind: Gun(arc: 44.0, speed: 0.9, range: 0.6),
             sprite: "pellet",
-            damage: 0.25,
+            damage: 0.28,
             rate: 0.9,
             count: 5,
         ),
@@ -21,7 +21,7 @@
         desc: "Slow slugs pierce a whole line.",
         sprite: "railgun",
         rarity: Rare,
-        unlock: 80,
+        unlock: 160,
         weapon: (
             kind: Gun(speed: 2.2, range: 1.6, pierce: 8),
             sprite: "slug",
@@ -62,7 +62,7 @@
         weapon: (
             kind: Zap(jumps: 3, range: 70.0),
             sprite: "spark",
-            damage: 0.4,
+            damage: 0.45,
             rate: 0.9,
         ),
     ),
@@ -87,7 +87,7 @@
         desc: "Burns a line through the crowd.",
         sprite: "laser_eye",
         rarity: Rare,
-        unlock: 120,
+        unlock: 240,
         weapon: (
             kind: Beam(length: 130.0, width: 3.0),
             sprite: "laser",
@@ -104,7 +104,7 @@
             kind: Mine(radius: 18.0, secs: 6.0),
             sprite: "mine",
             damage: 1.0,
-            rate: 0.45,
+            rate: 0.55,
         ),
     ),
     (
@@ -125,7 +125,7 @@
         desc: "Slows every foe near you.",
         sprite: "frost_halo",
         weapon: (
-            kind: Aura(radius: 34.0, slow: 0.35),
+            kind: Aura(radius: 34.0, slow: 0.45),
             sprite: "frost",
             damage: 0.0,
             rate: 2.0,
@@ -137,7 +137,7 @@
         desc: "Rocks fall from the sky. Again.",
         sprite: "meteor_call",
         rarity: Epic,
-        unlock: 150,
+        unlock: 320,
         weapon: (
             kind: Meteor(radius: 20.0),
             sprite: "meteor",
@@ -150,7 +150,7 @@
         name: "Quill Burst",
         desc: "Fires quills all around you.",
         sprite: "quill_burst",
-        unlock: 60,
+        unlock: 120,
         weapon: (
             kind: Gun(arc: 360.0, speed: 0.8, range: 0.8),
             sprite: "quill",
@@ -168,7 +168,7 @@
         sprite: "starfall",
         rarity: Epic,
         max_stacks: 2,
-        unlock: 150,
+        unlock: 320,
         triggers: [
             (on: Active, cooldown: 14.0, action: Strike(count: 8, radius: 22.0, damage: 3.0)),
         ],
@@ -180,7 +180,7 @@
         sprite: "cold_snap",
         max_stacks: 2,
         triggers: [
-            (on: Active, cooldown: 11.0, action: Chill(radius: 80.0, amount: 0.8, secs: 3.0)),
+            (on: Active, cooldown: 8.0, action: Chill(radius: 90.0, amount: 0.8, secs: 4.0)),
         ],
     ),
     (
@@ -200,7 +200,7 @@
         sprite: "adrenaline",
         rarity: Rare,
         max_stacks: 2,
-        unlock: 100,
+        unlock: 200,
         triggers: [
             (on: Active, cooldown: 16.0, action: Buff(stat: FireRate, mul: 1.0, secs: 5.0)),
             (on: Active, cooldown: 16.0, action: Buff(stat: Speed, mul: 0.25, secs: 5.0)),
@@ -224,7 +224,7 @@
         sprite: "bone_storm",
         max_stacks: 2,
         triggers: [
-            (on: Active, cooldown: 8.0, action: Nova(count: 24, damage: 1.0)),
+            (on: Active, cooldown: 8.0, action: Nova(count: 24, damage: 1.4)),
         ],
     ),
     (
@@ -245,7 +245,7 @@
         sprite: "gravity_egg",
         rarity: Rare,
         max_stacks: 2,
-        unlock: 120,
+        unlock: 240,
         triggers: [
             (on: Active, cooldown: 12.0, action: Shockwave(radius: 100.0, force: -380.0)),
             (on: Active, cooldown: 12.0, action: Chill(radius: 60.0, amount: 0.6, secs: 2.0)),
@@ -267,7 +267,7 @@
         desc: "Space: 8 shots at the nearest foes.",
         sprite: "war_drum",
         max_stacks: 2,
-        unlock: 60,
+        unlock: 120,
         triggers: [
             (on: Active, cooldown: 6.0, action: Volley(count: 8, damage: 1.2)),
         ],
@@ -286,12 +286,12 @@
     (
         id: "twin_barrel",
         name: "Twin Barrel",
-        desc: "+1 shot for every weapon. -15% damage.",
+        desc: "+1 shot for every weapon. -10% damage.",
         sprite: "twin_barrel",
-        unlock: 120,
+        unlock: 260,
         rarity: Rare,
         max_stacks: 4,
-        stats: [(stat: Shots, add: 1), (stat: Damage, mul: -0.15)],
+        stats: [(stat: Shots, add: 1), (stat: Damage, mul: -0.1)],
     ),
     (
         id: "rubber_ball",
@@ -312,7 +312,7 @@
         name: "Powder Keg",
         desc: "Kills may explode.",
         sprite: "powder_keg",
-        unlock: 90,
+        unlock: 180,
         rarity: Rare,
         triggers: [
             (on: Kill, chance: 0.3, action: Explode(radius: 18.0, damage: 0.8)),
@@ -323,7 +323,7 @@
         name: "Spark Plug",
         desc: "Dashing fires a ring of sparks.",
         sprite: "spark_plug",
-        unlock: 60,
+        unlock: 120,
         stats: [(stat: DashCooldown, mul: -0.1)],
         triggers: [
             (on: Dash, action: Nova(count: 10, damage: 0.7)),
@@ -357,19 +357,19 @@
         name: "Static Coil",
         desc: "Hits may arc lightning.",
         sprite: "static_coil",
-        unlock: 110,
+        unlock: 220,
         rarity: Rare,
         triggers: [
-            (on: Hit, chance: 0.2, action: Chain(jumps: 3, range: 60.0, damage: 0.6)),
+            (on: Hit, chance: 0.15, action: Chain(jumps: 3, range: 60.0, damage: 0.6)),
         ],
     ),
     (
         id: "iron_jaw",
         name: "Iron Jaw",
-        desc: "+25% damage.",
+        desc: "+20% damage.",
         sprite: "iron_jaw",
         max_stacks: 3,
-        stats: [(stat: Damage, mul: 0.25)],
+        stats: [(stat: Damage, mul: 0.2)],
     ),
     (
         id: "sharp_tooth",
@@ -381,10 +381,10 @@
     (
         id: "raptor_legs",
         name: "Raptor Legs",
-        desc: "+15% speed. Faster dash.",
+        desc: "+18% speed. Faster dash.",
         sprite: "raptor_legs",
         max_stacks: 3,
-        stats: [(stat: Speed, mul: 0.15), (stat: DashCooldown, mul: -0.12)],
+        stats: [(stat: Speed, mul: 0.18), (stat: DashCooldown, mul: -0.15)],
     ),
     (
         id: "big_bones",
@@ -404,10 +404,10 @@
     (
         id: "feather",
         name: "Feather",
-        desc: "+10% dodge.",
+        desc: "+12% dodge.",
         sprite: "feather",
         max_stacks: 3,
-        stats: [(stat: Dodge, add: 0.1)],
+        stats: [(stat: Dodge, add: 0.12)],
     ),
     (
         id: "moss_pouch",
@@ -428,11 +428,12 @@
     (
         id: "frost_fang",
         name: "Frost Fang",
-        desc: "Hits slow enemies.",
+        desc: "Hits slow enemies. +10% damage.",
         sprite: "frost_fang",
         max_stacks: 3,
+        stats: [(stat: Damage, mul: 0.1)],
         triggers: [
-            (on: Hit, action: Slow(amount: 0.35, secs: 1.5)),
+            (on: Hit, action: Slow(amount: 0.45, secs: 2.0)),
         ],
     ),
     (
@@ -443,7 +444,7 @@
         rarity: Rare,
         max_stacks: 3,
         triggers: [
-            (on: Kill, chance: 0.05, cooldown: 6.0, action: Heal(amount: 1)),
+            (on: Kill, chance: 0.04, cooldown: 16.0, action: Heal(amount: 1)),
         ],
     ),
     (
@@ -457,10 +458,10 @@
     (
         id: "long_neck",
         name: "Long Neck",
-        desc: "+35% range. Faster shots.",
+        desc: "+40% range. Faster, harder shots.",
         sprite: "long_neck",
         max_stacks: 3,
-        stats: [(stat: Range, mul: 0.35), (stat: ShotSpeed, mul: 0.2)],
+        stats: [(stat: Range, mul: 0.4), (stat: ShotSpeed, mul: 0.25), (stat: Damage, mul: 0.08)],
     ),
     (
         id: "boulder_shot",
@@ -468,7 +469,7 @@
         desc: "Bigger, harder shots. Slower fire.",
         sprite: "boulder_shot",
         max_stacks: 3,
-        stats: [(stat: ShotSize, mul: 0.5), (stat: Damage, mul: 0.3), (stat: FireRate, mul: -0.1)],
+        stats: [(stat: ShotSize, mul: 0.5), (stat: Damage, mul: 0.22), (stat: FireRate, mul: -0.1)],
     ),
     (
         id: "lucky_claw",
@@ -476,7 +477,7 @@
         desc: "Crits explode.",
         sprite: "lucky_claw",
         rarity: Rare,
-        unlock: 100,
+        unlock: 200,
         stats: [(stat: Crit, add: 0.05)],
         triggers: [
             (on: Crit, action: Explode(radius: 14.0, damage: 0.7)),
@@ -504,11 +505,11 @@
     (
         id: "spore_pod",
         name: "Spore Pod",
-        desc: "Every 3s, puff out 8 spores.",
+        desc: "Every 2.5s, puff out 8 spores.",
         sprite: "spore_pod",
-        unlock: 80,
+        unlock: 150,
         triggers: [
-            (on: Timer, cooldown: 3.0, action: Nova(count: 8, damage: 0.6)),
+            (on: Timer, cooldown: 2.5, action: Nova(count: 8, damage: 0.8)),
         ],
     ),
     (
@@ -518,7 +519,7 @@
         sprite: "glass_cannon",
         rarity: Epic,
         max_stacks: 2,
-        unlock: 200,
+        unlock: 400,
         stats: [(stat: Damage, mul: 0.6), (stat: MaxHp, add: -2.0)],
     ),
     (
@@ -527,7 +528,7 @@
         desc: "Kills may call lightning.",
         sprite: "storm_cell",
         rarity: Epic,
-        unlock: 180,
+        unlock: 360,
         triggers: [
             (on: Kill, chance: 0.25, action: Chain(jumps: 4, range: 70.0, damage: 0.9)),
         ],
@@ -538,7 +539,7 @@
         desc: "Level-ups heal half a heart.",
         sprite: "fossil",
         max_stacks: 2,
-        unlock: 50,
+        unlock: 100,
         triggers: [
             (on: LevelUp, action: Heal(amount: 1)),
         ],
@@ -554,11 +555,12 @@
     (
         id: "hot_foot",
         name: "Hot Foot",
-        desc: "Dashing leaves a blast behind.",
+        desc: "Faster dash. Dashing leaves a blast.",
         sprite: "hot_foot",
-        unlock: 60,
+        unlock: 120,
+        stats: [(stat: DashCooldown, mul: -0.1)],
         triggers: [
-            (on: Dash, action: Explode(radius: 26.0, damage: 1.4)),
+            (on: Dash, action: Explode(radius: 30.0, damage: 2.2)),
         ],
     ),
 ]

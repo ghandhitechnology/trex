@@ -36,9 +36,10 @@ pub struct Reward {
     pub feats: Vec<usize>,
 }
 
-/// Bones before upgrades: one per 10 s survived, one per 25 kills, one per level.
+/// Bones before upgrades: one per 20 s survived, one per 200 kills, one per
+/// two levels.
 pub fn base_bones(r: &RunResult) -> u32 {
-    (r.time / 10.0) as u32 + r.kills / 25 + r.level.saturating_sub(1)
+    (r.time / 20.0) as u32 + r.kills / 200 + r.level / 2
 }
 
 pub fn record_run(save: &mut Save, content: &Content, r: &RunResult) -> Reward {
@@ -288,7 +289,7 @@ mod tests {
     fn feats_fire_once_and_grant_rewards() {
         let c = content::get();
         let mut s = Save::default();
-        s.best.insert("rex".into(), 200.0);
+        s.best.insert("rex".into(), 500.0);
         let got = check_feats(&mut s, c);
         assert!(got.contains(&feat(c, "hatchling")) && got.contains(&feat(c, "horns_up")));
         assert!(s.unlocked.contains("trike"));
@@ -307,7 +308,7 @@ mod tests {
         let r = RunResult { character: "rex", time: 95.0, kills: 60, level: 5, build: &build };
         let reward = record_run(&mut s, c, &r);
         assert!(reward.new_best);
-        assert_eq!(reward.bones, 9 + 2 + 4);
+        assert_eq!(reward.bones, 4 + 2);
         assert_eq!((s.records.stacks, s.records.items, s.records.kills), (2, 2, 60));
         assert!(reward.feats.contains(&feat(c, "hatchling")));
         let shorter = RunResult { time: 30.0, ..r };

@@ -63,7 +63,7 @@ Every tunable player number is a `Stat`. Final value:
 | `XpGain` | XP multiplier | 1 |
 | `Regen` | HP per minute | 0 |
 | `Dodge` | chance to ignore a hit, max 0.6 | 0 |
-| `DashCooldown` | seconds | 1.4 |
+| `DashCooldown` | seconds | 1.25 |
 | `Area` | radius multiplier for explosions, chains, shockwaves | 1 |
 | `Duration` | multiplier for burn and slow | 1 |
 
@@ -286,16 +286,18 @@ Enemies with `hp` of 40 or more, and elites, show a health bar when damaged.
 `Radial` (`Shots` evenly around the player, no target needed).
 
 Each hero has a walk sprite and an `_idle` sprite in `src/meta/sprites.rs`,
-two frames each. Compare heroes with `trex --sim --runs 20 --hero ID`.
+two frames each. Compare heroes with `trex --sim --runs 40`.
 
 ## waves.ron
 
 ```ron
 (
-    credits: 0.9,          // spawn credits per second at 0:00
-    credits_per_min: 1.3,  // added to that each minute
-    hp_growth: 0.25,       // enemy HP x1.25 per minute, compounding
-    speed_per_min: 0.06,   // optional, enemy speed +6% per minute, max +50%
+    credits: 0.7,          // spawn credits per second at 0:00
+    credits_per_min: 2.0,  // added to that each minute
+    hp_growth: 0.27,       // enemy HP x1.27 per minute, compounding
+    speed_per_min: 0.05,   // optional, enemy speed +5% per minute
+    speed_max: 0.35,       // optional, up to +35%
+    overtime: Some((from: 1320.0, every: 240.0)), // optional, see below
     max_alive: 320,        // cap on live + pending enemies
     stage_length: 150.0,   // seconds per stage
     loop_from: 1,          // optional, stage to loop back to after the last
@@ -322,7 +324,9 @@ default `Tarpit`) picks the arena look: `Tarpit`, `Fernbog` or `Ashfall`.
 `ground` (optional) is three palette characters (dark, mid, light) the floor
 is recolored to on top of the biome. Both fade in over 3 seconds. After the
 last stage the list loops from `loop_from`, and HP, credits, and elite odds
-keep growing, so endless runs keep escalating.
+keep growing, so endless runs keep escalating. From `overtime.from` seconds
+every hit on the player deals 1 more damage, plus 1 more each `every`
+seconds, so no build lasts forever.
 
 Elites roll per bought spawn (not events or summons) once the run passes
 `from`: `chance` plus `per_min` each minute, capped at `max`. An elite has `hp`
@@ -341,8 +345,8 @@ credits) for checking late-game content.
 
 ## meta.ron
 
-Runs pay bones: one per 10 s, one per 25 kills, one per level after the
-first, scaled by upgrades. Bones buy heroes and items with an `unlock` cost
+Runs pay bones: one per 20 s, one per 200 kills, one per two levels,
+scaled by upgrades. Bones buy heroes and items with an `unlock` cost
 and levels of permanent upgrades.
 
 ```ron
@@ -397,5 +401,7 @@ at startup if the records already meet it. The goal text is generated.
 cargo test                                   # content loads and validates
 trex --sheet /tmp/sheet.png                  # every sprite on one sheet
 trex --dump-frames /tmp/frames --seconds 120 --seed 3   # also writes hub_*.png
-trex --sim --runs 30 [--hero ID]             # survival stats with a bot
+trex --sim --runs 30 [--hero ID]             # survival per hero with a bot
+trex --sim --runs 10 --save unlocked --items # pick rate and survival delta per item
+trex --meta --runs 200                       # unlock and feat pacing over many runs
 ```

@@ -13,9 +13,15 @@ use crate::render::palette;
 use crate::render::sprite::SpriteId;
 
 pub const RADIUS: f32 = 5.0;
-const DASH_TIME: f32 = 0.16;
-const DASH_SPEED: f32 = 3.4;
+const DASH_TIME: f32 = 0.14;
+/// Dash velocity as a multiple of move speed: about 38 px at base speed.
+const DASH_SPEED: f32 = 4.0;
+/// Invulnerable this long after a dash ends.
+const DASH_GRACE: f32 = 0.12;
 const HURT_INVULN: f32 = 1.0;
+/// Velocity smoothing rates toward the held direction and toward a stop.
+const ACCEL: f32 = 20.0;
+const DECEL: f32 = 26.0;
 
 pub fn update(w: &mut World, c: &Controls, dt: f32) {
     let speed = w.stats.get(Stat::Speed);
@@ -36,7 +42,7 @@ pub fn update(w: &mut World, c: &Controls, dt: f32) {
         p.dash_dir = dir;
         p.dash_time = DASH_TIME;
         p.dash_cd = w.stats.get(Stat::DashCooldown);
-        p.invuln = p.invuln.max(DASH_TIME + 0.1);
+        p.invuln = p.invuln.max(DASH_TIME + DASH_GRACE);
         let pos = p.pos;
         w.events.push_back(GameEvent::at(On::Dash, pos, 0));
         w.fx.burst(pos, &[palette::FOG, palette::HAZE], 6, 50.0);
@@ -51,7 +57,7 @@ pub fn update(w: &mut World, c: &Controls, dt: f32) {
         let frame = (w.player.anim * 8.0) as usize;
         w.fx.ghost(pos, sprite, frame, flip);
     } else {
-        let rate = if input.len_sq() > 0.0 { 14.0 } else { 18.0 };
+        let rate = if input.len_sq() > 0.0 { ACCEL } else { DECEL };
         p.vel = p.vel.lerp(input * speed, damp(rate, dt));
     }
 
@@ -148,6 +154,7 @@ pub fn hurt(w: &mut World, dmg: i32, from: Vec2) {
     if w.player.invuln > 0.0 || w.player.hp <= 0 || dmg <= 0 {
         return;
     }
+    let dmg = dmg + content::get().waves.overtime_damage(w.director.clock(w));
     let pos = w.player.pos;
     let dodge = w.stats.get(Stat::Dodge);
     if dodge > 0.0 && w.rng.chance(dodge) {

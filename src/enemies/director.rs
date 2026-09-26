@@ -20,9 +20,14 @@ pub struct WavesDef {
     pub credits_per_min: f32,
     /// Enemy HP growth per minute, compounding (0.2 = +20% per minute).
     pub hp_growth: f32,
-    /// Enemy speed multiplier added each minute (capped at +50%).
+    /// Enemy speed multiplier added each minute, up to `speed_max`.
     #[serde(default)]
     pub speed_per_min: f32,
+    #[serde(default)]
+    pub speed_max: f32,
+    /// Past this point enemies hit harder, so every run ends.
+    #[serde(default)]
+    pub overtime: Option<Overtime>,
     /// Cap on live plus pending enemies.
     pub max_alive: usize,
     /// Seconds per stage.
@@ -56,6 +61,15 @@ pub struct Stage {
     pub kinds: Vec<(usize, f32)>,
     #[serde(skip)]
     pub ramp: Option<[Color; 3]>,
+}
+
+/// Extra damage on every hit the player takes: +1 at `from` seconds, and
+/// +1 more every `every` seconds after.
+#[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
+pub struct Overtime {
+    pub from: f32,
+    pub every: f32,
 }
 
 #[derive(Deserialize, Debug)]
@@ -166,12 +180,20 @@ impl WavesDef {
         if i < n { i } else { self.loop_from + (i - n) % (n - self.loop_from) }
     }
 
+    /// Capped far past any real run so HP never reaches infinity.
     pub fn hp_mul(&self, t: f32) -> f32 {
-        (1.0 + self.hp_growth).powf(t / 60.0)
+        (1.0 + self.hp_growth).powf(t / 60.0).min(1e12)
     }
 
     pub fn speed_mul(&self, t: f32) -> f32 {
-        1.0 + (self.speed_per_min * t / 60.0).min(0.5)
+        1.0 + (self.speed_per_min * t / 60.0).min(self.speed_max)
+    }
+
+    pub fn overtime_damage(&self, t: f32) -> i32 {
+        match &self.overtime {
+            Some(o) if t >= o.from => 1 + ((t - o.from) / o.every.max(1.0)) as i32,
+            _ => 0,
+        }
     }
 }
 

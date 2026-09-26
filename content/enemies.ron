@@ -7,7 +7,7 @@
         behavior: Weave(amp: 0.8, freq: 3.0), death: Fade,
     ),
     (
-        id: "mite", sprite: "mite", hp: 2.0, speed: 50.0, radius: 3.0, mass: 0.4, cost: 0.5,
+        id: "mite", sprite: "mite", hp: 2.0, speed: 48.0, radius: 3.0, mass: 0.4, cost: 0.5,
         behavior: Weave(amp: 1.2, freq: 8.0), death: Pop,
     ),
     (
