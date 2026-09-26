@@ -12,6 +12,7 @@ every data change.
 | `enemies.ron` | enemy types |
 | `characters.ron` | playable characters |
 | `waves.ron` | the wave director |
+| `meta.ron` | permanent upgrades and feats |
 
 Fields marked *optional* can be left out.
 
@@ -23,7 +24,7 @@ Content refers to sprites by name. Sprites are code, one module per area:
 |------|--------|
 | items, item projectiles | `src/items/sprites.rs` |
 | enemies, enemy projectiles | `src/enemies/sprites.rs` |
-| characters, weapon projectiles | `src/meta/sprites.rs` |
+| characters, weapon projectiles, meta icons | `src/meta/sprites.rs` |
 | HUD and menus | `src/ui/sprites.rs` |
 | gems, spawn warning | `src/render/sprites.rs` |
 
@@ -163,8 +164,9 @@ Enemies defined with `hp` of 40 or more show a health bar when damaged.
     id: "rex",
     name: "Rex",
     desc: "Spits embers. Dashes knock enemies back.",
-    sprite: "rex",
-    unlock: 0,                          // optional
+    sprite: "rex",                      // walk frames
+    idle: "rex_idle",                   // optional: idle frames, else the first walk frame
+    unlock: 0,                          // optional: bones to unlock, 0 = free
     weapon: (shot: "bolt", pattern: Aimed),
     base: { MaxHp: 6.0, FireRate: 2.0 }, // optional: overrides stat defaults
     stats: [],                          // optional passive modifiers
@@ -176,6 +178,9 @@ Enemies defined with `hp` of 40 or more show a health bar when damaged.
 
 `pattern` is `Aimed` (default: fan of `Shots` at the nearest enemy) or
 `Radial` (`Shots` evenly around the player, no target needed).
+
+Each hero has a walk sprite and an `_idle` sprite in `src/meta/sprites.rs`,
+two frames each. Compare heroes with `trex --sim --runs 20 --hero ID`.
 
 ## waves.ron
 
@@ -200,11 +205,63 @@ just off screen; ones that land on screen get a warning marker first. Event
 `shape` is `Ring` (circle around the player) or `Cluster` (one group off
 screen); `every` (optional) repeats the event, and counts grow 15% per minute.
 
+## meta.ron
+
+Runs pay bones: one per 10 s, one per 25 kills, one per level after the
+first, scaled by upgrades. Bones buy heroes and items with an `unlock` cost
+and levels of permanent upgrades.
+
+```ron
+(
+    upgrades: [
+        (
+            id: "sharp_teeth",
+            name: "Sharp Teeth",
+            desc: "+6% damage.",
+            sprite: "up_damage",
+            costs: [30, 60, 100],               // price per level; length = max level
+            stats: [(stat: Damage, mul: 0.06)], // optional, added once per level
+            bones: 0.0,                         // optional, extra bones per level (0.1 = +10%)
+        ),
+    ],
+    feats: [
+        (id: "horns_up", name: "Horns Up", goal: Survive(180.0), reward: Unlock("trike")),
+    ],
+)
+```
+
+Feats read lifetime records from the save, so a feat added later is granted
+at startup if the records already meet it. The goal text is generated.
+
+| goal | met when |
+|------|----------|
+| `Survive(secs)` | best time with any hero |
+| `SurviveAs("id", secs)` | best time with that hero |
+| `Kills(n)`, `Level(n)` | best single run |
+| `Stacks(n)` | one item stacked `n` times in a run |
+| `Items(n)` | `n` different items in a run |
+| `TotalKills(n)`, `Runs(n)`, `Bones(n)` | lifetime totals (bones earned) |
+| `Heroes(n)` | heroes unlocked, free ones included |
+| `Upgrades(n)` | upgrade levels bought |
+
+`reward` is `Bones(n)` or `Unlock("id")` (a hero or an item, free).
+
+## Save file
+
+`<data dir>/trex/save.ron` (or `$TREX_SAVE`), versioned (`meta::save::VERSION`).
+
+- Every field has a default and unknown fields are ignored, so old files load
+  and ids of removed content are kept as they are.
+- The file holds only numbers, strings, and maps, so newer builds can add
+  content types without breaking older readers.
+- Older versions migrate in `save::parse`. A file from a newer version is
+  read-only; a file that does not parse is moved to `save.ron.bad`.
+
 ## Checking changes
 
 ```sh
 cargo test                                   # content loads and validates
 trex --sheet /tmp/sheet.png                  # every sprite on one sheet
-trex --dump-frames /tmp/frames --seconds 120 --seed 3
-trex --sim --runs 30                         # survival stats with a bot
+trex --dump-frames /tmp/frames --seconds 120 --seed 3   # also writes hub_*.png
+trex --sim --runs 30 [--hero ID]             # survival stats with a bot
 ```

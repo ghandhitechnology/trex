@@ -19,7 +19,7 @@ impl Bot {
     pub fn controls(&mut self, g: &Game) -> Controls {
         let mut c = Controls::default();
         match &g.scene {
-            Scene::Title => c.confirm = true,
+            Scene::Title | Scene::Hub(_) => c.confirm = true,
             Scene::LevelUp(o) if o.age > 0.5 => c.pick = Some(1 + self.rng.below(o.items.len()) as u8),
             Scene::Playing => self.steer(g, &mut c),
             _ => {}

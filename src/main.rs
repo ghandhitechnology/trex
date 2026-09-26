@@ -19,9 +19,9 @@ trex: a roguelite for a terminal pane
 
 usage:
   trex                                  play
-  trex --dump-frames DIR [--seconds N] [--seed S] [--every SECS] [--size WxH]
+  trex --dump-frames DIR [--seconds N] [--seed S] [--every SECS] [--size WxH] [--hero ID]
                                         bot run, write PNG frames (4x)
-  trex --sim [--runs N] [--seed S] [--max-secs N]
+  trex --sim [--runs N] [--seed S] [--max-secs N] [--hero ID]
                                         bot runs without rendering, print stats
   trex --sheet FILE                     write every sprite to one PNG
 
@@ -58,6 +58,14 @@ fn size(s: &str) -> Result<(i32, i32), String> {
     Ok((w, h))
 }
 
+/// `--hero ID`, checked against the content.
+fn hero(args: &Args) -> Result<Option<&str>, String> {
+    match args.value("--hero") {
+        Some(id) if content::get().character(id).is_none() => Err(format!("unknown hero {id}")),
+        v => Ok(v),
+    }
+}
+
 fn run(args: &Args) -> Result<(), String> {
     if args.flag("--help") || args.flag("-h") {
         println!("{USAGE}");
@@ -70,11 +78,14 @@ fn run(args: &Args) -> Result<(), String> {
             seed: args.parse("--seed", 1)?,
             every: args.parse("--every", 2.0)?,
             size: args.value("--size").map_or(Ok((256, 144)), size)?,
+            hero: hero(args)?,
         };
         return headless::dump_frames(&opts).map_err(|e| e.to_string());
     }
     if args.flag("--sim") {
-        headless::sim(args.parse("--runs", 20)?, args.parse("--seed", 1)?, args.parse("--max-secs", 1800.0)?);
+        let (runs, seed, max_secs) =
+            (args.parse("--runs", 20)?, args.parse("--seed", 1)?, args.parse("--max-secs", 1800.0)?);
+        headless::sim(runs, seed, max_secs, hero(args)?);
         return Ok(());
     }
     if let Some(file) = args.value("--sheet") {

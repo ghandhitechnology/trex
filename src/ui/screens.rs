@@ -186,7 +186,7 @@ pub fn dead(cv: &mut Canvas, s: &Summary, clock: f32) {
     font::draw_centered(cv, cx, y + 62, &stats, palette::FOG, INK);
 
     if s.age > 0.7 {
-        font::draw_centered(cv, cx, cv.h - 16, "SPACE RETRY   ESC TITLE", palette::HAZE, INK);
+        font::draw_centered(cv, cx, cv.h - 16, "SPACE RETRY   ESC MENU", palette::HAZE, INK);
     }
 }
 

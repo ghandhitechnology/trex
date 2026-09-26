@@ -285,6 +285,8 @@ fn default_stacks() -> u32 {
 #[derive(Clone, Debug, Default)]
 pub struct Build {
     pub items: Vec<(usize, u32)>,
+    /// Permanent upgrade modifiers from the save, applied like a passive.
+    pub bonus: Vec<StatMod>,
 }
 
 impl Build {
@@ -299,7 +301,7 @@ impl Build {
         }
     }
 
-    /// Final stats: character base, then every modifier from the passive and item stacks.
+    /// Final stats: character base, then every modifier from the passive, upgrades, and item stacks.
     pub fn stats(&self, ch: &CharacterDef, content: &Content) -> Stats {
         let mut base = Stats::defaults();
         for (s, v) in &ch.base {
@@ -307,7 +309,7 @@ impl Build {
         }
         let item_mods =
             self.items.iter().flat_map(|&(i, n)| (0..n).flat_map(move |_| content.items[i].stats.iter()));
-        apply_mods(&base, ch.stats.iter().chain(item_mods))
+        apply_mods(&base, ch.stats.iter().chain(&self.bonus).chain(item_mods))
     }
 
     /// Every trigger instance. Each stack adds its triggers again.

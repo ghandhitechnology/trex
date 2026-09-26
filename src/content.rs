@@ -9,18 +9,21 @@ use crate::enemies::EnemyDef;
 use crate::enemies::director::WavesDef;
 use crate::items::ItemDef;
 use crate::meta::characters::CharacterDef;
+use crate::meta::defs::MetaDef;
 use crate::render::sprite::{SpriteId, bank};
 
 const ITEMS: &str = include_str!("../content/items.ron");
 const ENEMIES: &str = include_str!("../content/enemies.ron");
 const CHARACTERS: &str = include_str!("../content/characters.ron");
 const WAVES: &str = include_str!("../content/waves.ron");
+const META: &str = include_str!("../content/meta.ron");
 
 pub struct Content {
     pub items: Vec<ItemDef>,
     pub enemies: Vec<EnemyDef>,
     pub characters: Vec<CharacterDef>,
     pub waves: WavesDef,
+    pub meta: MetaDef,
 }
 
 static CONTENT: OnceLock<Content> = OnceLock::new();
@@ -56,6 +59,7 @@ impl Content {
             enemies: parse("enemies.ron", ENEMIES)?,
             characters: parse("characters.ron", CHARACTERS)?,
             waves: parse("waves.ron", WAVES)?,
+            meta: parse("meta.ron", META)?,
         };
         c.resolve()?;
         Ok(c)
@@ -102,7 +106,7 @@ impl Content {
         if self.waves.phases.is_empty() {
             return Err("waves: no phases".into());
         }
-        Ok(())
+        crate::meta::defs::resolve(self)
     }
 
     pub fn character(&self, id: &str) -> Option<usize> {

@@ -14,6 +14,7 @@
         name: "Twin Barrel",
         desc: "+1 shot. -15% damage.",
         sprite: "twin_barrel",
+        unlock: 120,
         rarity: Rare,
         max_stacks: 4,
         stats: [(stat: Shots, add: 1), (stat: Damage, mul: -0.15)],
@@ -37,6 +38,7 @@
         name: "Powder Keg",
         desc: "Kills may explode.",
         sprite: "powder_keg",
+        unlock: 90,
         rarity: Rare,
         triggers: [
             (on: Kill, chance: 0.3, action: Explode(radius: 18.0, damage: 0.8)),
@@ -47,6 +49,7 @@
         name: "Spark Plug",
         desc: "Dashing fires a ring of sparks.",
         sprite: "spark_plug",
+        unlock: 60,
         stats: [(stat: DashCooldown, mul: -0.1)],
         triggers: [
             (on: Dash, action: Nova(count: 10, damage: 0.7)),
@@ -79,6 +82,7 @@
         name: "Static Coil",
         desc: "Hits may arc lightning.",
         sprite: "static_coil",
+        unlock: 110,
         rarity: Rare,
         triggers: [
             (on: Hit, chance: 0.2, action: Chain(jumps: 3, range: 60.0, damage: 0.6)),
