@@ -79,12 +79,12 @@ pub struct Fx {
 }
 
 const MAX_PARTICLES: usize = 1500;
-const MAX_TEXTS: usize = 40;
+const MAX_TEXTS: usize = 24;
 const TEXT_LIFE: f32 = 0.7;
 const GHOST_LIFE: f32 = 0.22;
 /// Damage numbers landing this close to a fresh one merge into it.
-const MERGE_DIST: f32 = 10.0;
-const MERGE_AGE: f32 = 0.18;
+const MERGE_DIST: f32 = 14.0;
+const MERGE_AGE: f32 = 0.3;
 
 impl Fx {
     pub fn new(seed: u64, enabled: bool) -> Self {

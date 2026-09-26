@@ -293,7 +293,7 @@ impl World {
             return false;
         }
         e.hp -= enemies::absorb(e, hit.damage);
-        e.flash = 0.09;
+        e.hit_flash();
         e.push += hit.knock / def.mass;
         let pos = e.pos;
         let killed = e.hp <= 0.0;

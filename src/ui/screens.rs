@@ -253,7 +253,8 @@ pub fn dead(cv: &mut Canvas, w: &World, s: &Summary, clock: f32) {
     let bank = bank();
     let a = s.age;
     let cx = cv.w / 2;
-    let y = (cv.h / 2 - 58).max(4);
+    // Clear of the feat toast strip on top.
+    let y = (cv.h / 2 - 53).max(16);
 
     // Title drops in and lands with a jolt.
     let drop = ((1.0 - ease_back(a / 0.35)) * -40.0) as i32;

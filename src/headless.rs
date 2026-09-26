@@ -15,6 +15,7 @@ use crate::render::font;
 use crate::render::palette;
 use crate::render::png;
 use crate::render::sprite::bank;
+use crate::sim::Start;
 
 /// Upscale for written PNGs.
 const PNG_SCALE: usize = 4;
@@ -26,16 +27,12 @@ pub struct DumpOptions<'a> {
     pub every: f32,
     pub size: (i32, i32),
     pub hero: Option<&'a str>,
+    pub start: Start,
 }
 
-/// A fresh save that starts on `hero` (unlocked) if given.
-fn start_save(hero: Option<&str>) -> Save {
-    let mut save = Save::default();
-    if let Some(id) = hero {
-        save.character = id.to_string();
-        save.unlocked.insert(id.to_string());
-    }
-    save
+/// A `start` save on `hero`, or on the default hero.
+fn start_save(hero: Option<&str>, start: Start) -> Save {
+    start.save(hero.unwrap_or(&Save::default().character))
 }
 
 /// Play a bot run and write PNG frames: the title, the hub tabs, periodic
@@ -44,7 +41,7 @@ fn start_save(hero: Option<&str>) -> Save {
 pub fn dump_frames(o: &DumpOptions) -> io::Result<()> {
     std::fs::create_dir_all(o.dir)?;
     let hub_frames = dump_hub(o)?;
-    let mut game = Game::new(start_save(o.hero), None, o.seed, o.size, true);
+    let mut game = Game::new(start_save(o.hero, o.start), None, o.seed, o.size, true);
     let mut cv = Canvas::new(o.size.0, o.size.1);
     let mut written = 0;
     let mut write = |name: &str, game: &Game, cv: &mut Canvas| -> io::Result<()> {
@@ -103,12 +100,14 @@ pub fn dump_frames(o: &DumpOptions) -> io::Result<()> {
 fn dump_hub(o: &DumpOptions) -> io::Result<usize> {
     let mut game = Game::new(meta::demo_save(), None, o.seed, o.size, true);
     let mut cv = Canvas::new(o.size.0, o.size.1);
-    let shots: [(&str, Tab, usize); 5] = [
+    let last_feat = crate::content::get().meta.feats.len() - 1;
+    let shots: [(&str, Tab, usize); 6] = [
         ("hub_heroes.png", Tab::Heroes, 0),
         ("hub_locked.png", Tab::Heroes, 3),
         ("hub_shop.png", Tab::Shop, 2),
         ("hub_items.png", Tab::Shop, 10),
         ("hub_feats.png", Tab::Feats, 4),
+        ("hub_feats_end.png", Tab::Feats, last_feat),
     ];
     for (name, tab, pick) in shots {
         let mut hub = Hub::new(pick.min(crate::content::get().characters.len() - 1));
@@ -127,7 +126,7 @@ fn dump_hub(o: &DumpOptions) -> io::Result<usize> {
 /// An unkillable bot run with visuals on that renders and upscales every
 /// tick like the live loop, printing entity counts and frame cost per minute.
 pub fn stress(minutes: f32, seed: u64, size: (i32, i32), hero: Option<&str>) {
-    let mut game = Game::new(start_save(hero), None, seed, size, true);
+    let mut game = Game::new(start_save(hero, Start::Fresh), None, seed, size, true);
     game.start_run();
     let mut bot = Bot::new(seed);
     let mut cv = Canvas::new(size.0, size.1);

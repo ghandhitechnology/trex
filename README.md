@@ -1,53 +1,67 @@
 # trex
 
-Roguelite arena shooter that renders inside a terminal pane with kitty
-graphics. Spec: `DESIGN.md`. Data format: `content/README.md`.
+A pixel-art roguelite arena shooter that runs inside a terminal pane. You
+play a dinosaur, your weapons fire on their own, and you pick items on every
+level-up until the waves overrun you. Runs pay out bones for permanent
+upgrades, new items, and six more heroes.
+
+Built to sit in a tmux pane next to your work. It pauses when the pane loses
+focus.
+
+## Install
 
 ```sh
-cargo run --release                     # play (Ghostty or Kitty, tmux ok)
-trex --dump-frames DIR --seconds 60 --seed 3 [--every 2] [--size 256x144] [--hero ID]
-trex --sim --runs 30 [--seed 1] [--max-secs 3600] [--hero ID] [--save fresh|unlocked|maxed] [--items]
-trex --meta --runs 200 [--seed 1]
-trex --stress [--minutes 60] [--seed 1] [--size 256x144] [--hero ID]
+cargo install --path .
+trex
+```
+
+Needs Rust 1.85 or newer. The save lives in
+`~/Library/Application Support/trex/save.ron` on macOS
+(`~/.local/share/trex/` on Linux); `TREX_SAVE=PATH` moves it.
+
+## Terminal
+
+- **Ghostty** or **Kitty**. The game draws with the kitty graphics protocol
+  and Unicode placeholders; other terminals are not supported.
+- **tmux 3.3+** works. Add this to `~/.tmux.conf` and reload:
+
+  ```tmux
+  set -g allow-passthrough on
+  set -g focus-events on
+  ```
+
+  `allow-passthrough` lets the image through tmux. `focus-events` lets the
+  game pause when you switch panes.
+- Any pane size works; the picture scales to fit. Around 100x30 cells or
+  larger looks best.
+
+## Controls
+
+| key | in a run | in menus |
+|---|---|---|
+| WASD or arrows | move | pick |
+| Space or Enter | dash and fire active items | confirm |
+| 1 to 9 | take a level-up card | |
+| P or Esc | pause | back |
+| Q | quit (Y confirms) | quit (Y confirms) |
+
+## Development
+
+```sh
+trex --dump-frames DIR [--seconds N] [--seed S] [--every SECS] [--hero ID] [--save fresh|unlocked|maxed]
+trex --sim --runs 30 [--hero ID] [--save fresh|unlocked|maxed] [--items]
+trex --meta --runs 200
+trex --stress [--minutes 60]
 trex --sheet sheet.png
 ```
 
-`--dump-frames` plays a bot run and writes 4x PNGs: `title.png`, five
-`hub_*.png` menus over a mid-progress save, a gameplay frame every `--every`
-seconds, the first three level-up screens, `paused.png` halfway, `dying.png`
-mid death transition, and `dead.png`. `--sim` runs bot games without
-rendering on every core and prints survival percentiles per hero from a
-fresh, fully unlocked, or maxed save; `--items` adds each item's pick rate
-and its survival delta when the bot always takes it. `--meta` plays runs in a
-row on one save, buying the cheapest thing it can after each, and prints
-when unlocks and feats land. `--stress` plays an unkillable bot run, renders
-every tick like the live loop, and prints entity counts and frame cost per
-minute. All of them are deterministic per seed.
+- `--dump-frames` plays a bot run and writes 4x PNGs of the title, every hub
+  tab, gameplay, level-ups, pause, and death, so the art can be checked
+  without a terminal.
+- `--sim` and `--items` print survival per hero and per item from bot runs.
+  `--meta` shows when unlocks and feats land over many runs. `--stress`
+  prints entity counts and frame cost per minute.
+- `TREX_GFX=shm|file|direct` pins the image transfer, `TREX_SCALE=N` pins the
+  upscale, `TREX_WARP=SECS` starts the waves that far in.
 
-The bot (`bot.rs`) plays like a decent player: it sees shots after a short
-reaction delay, reads telegraphed charges, slams, fuses and burrows, scores a
-ring of directions for danger over the next half second, and dashes out of
-hits it can't walk away from. Balance targets: a fresh Rex run lasts about 6
-minutes, a maxed save about 17, and overtime ends every run.
-
-Env: `TREX_GFX=shm|file|direct` pins the transfer medium, `TREX_SCALE=N`
-pins the upscale, `TREX_SAVE=PATH` moves the save, `TREX_WARP=SECS` starts
-the wave director that far into a run, `TREX_DEBUG=1` prints the medium on
-exit. Save: `~/Library/Application Support/trex/save.ron` (macOS).
-
-## Modules
-
-Areas are split so they can change in parallel.
-
-| area | files |
-|------|-------|
-| engine core | `engine/` (math, RNG, spatial grid), `game/` (scenes, world step order, player, shots, gems), `content.rs`, `app.rs` (loop), `term/` (terminal, kitty graphics, input) |
-| items and effects | `items/mod.rs` (stats, triggers, items, level-up offers), `items/weapons.rs` (item weapons, actives), `items/synergy.rs`, `items/effects.rs` (trigger runner, actions), `items/draw.rs`, `items/sprites.rs`, `content/items.ron`, `content/synergies.ron` |
-| enemies and director | `enemies/mod.rs` (defs, per-tick update), `enemies/ai.rs` (behaviors), `enemies/boss.rs`, `enemies/director.rs` (stages, elites, bosses), `enemies/death.rs`, `enemies/draw.rs`, `enemies/sprites.rs`, `content/enemies.ron`, `content/waves.ron` |
-| heroes, meta, save | `meta/characters.rs`, `meta/mod.rs` (run rewards, unlocks, feats), `meta/defs.rs`, `meta/hub.rs` and `meta/screens.rs` (hero select, shop, feats), `meta/save.rs`, `meta/sprites.rs`, `content/characters.ron`, `content/meta.ron` |
-| render, art, UI | `render/` (palette, canvas, sprites, font, camera, fx, biome floors, lighting, world drawing, PNG), `ui/` (HUD, screens, UI sprites) |
-| headless | `headless.rs`, `sim.rs`, `bot.rs` |
-
-The sim runs at a fixed 60 Hz (`engine::DT`). Gameplay uses `World::rng`
-only; visual effects use their own RNG, so runs replay identically with or
-without rendering.
+Spec: `DESIGN.md`. Content format: `content/README.md`.

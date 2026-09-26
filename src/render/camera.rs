@@ -28,8 +28,8 @@ impl Camera {
         let clamp_axis = |c: f32, lo: f32, size: f32, h: f32| {
             if size <= h * 2.0 { lo + size / 2.0 } else { c.clamp(lo + h, lo + size - h) }
         };
-        self.center.x = clamp_axis(self.center.x, bounds.x - 12.0, bounds.w + 24.0, half.x);
-        self.center.y = clamp_axis(self.center.y, bounds.y - 12.0, bounds.h + 24.0, half.y);
+        self.center.x = clamp_axis(self.center.x, bounds.x - 16.0, bounds.w + 32.0, half.x);
+        self.center.y = clamp_axis(self.center.y, bounds.y - 16.0, bounds.h + 32.0, half.y);
         // Smooth shake: layered sines instead of white noise, so a hit reads as
         // a jolt that rings out rather than per-frame jitter.
         if self.trauma <= 0.0 {

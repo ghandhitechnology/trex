@@ -264,6 +264,14 @@ impl Enemy {
         self.shield = self.shield_max;
     }
 
+    /// Start a hit flash unless one ended moments ago, so an enemy under
+    /// constant fire still shows its own colors most of the time.
+    pub fn hit_flash(&mut self) {
+        if self.flash <= -FLASH_GAP {
+            self.flash = FLASH;
+        }
+    }
+
     /// Can be hit, targeted, and touched.
     pub fn hittable(&self) -> bool {
         !self.dead && !self.hidden
@@ -295,6 +303,9 @@ pub fn resolve(defs: &mut [EnemyDef]) -> Result<(), String> {
 }
 
 const BURN_TICK: f32 = 0.25;
+/// Hit flash length, and the rest after one before the next can start.
+const FLASH: f32 = 0.08;
+const FLASH_GAP: f32 = 0.14;
 const SHIELD_DELAY: f32 = 2.5;
 /// Seconds an enemy projectile lives.
 const SHOT_LIFE: f32 = 3.0;
@@ -313,7 +324,7 @@ pub fn update(w: &mut World, dt: f32) {
             continue;
         }
         let def = &content.enemies[e.kind];
-        e.flash = (e.flash - dt).max(0.0);
+        e.flash = (e.flash - dt).max(-FLASH_GAP);
         e.anim += dt;
         if e.slow_time > 0.0 {
             e.slow_time -= dt;

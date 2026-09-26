@@ -183,7 +183,7 @@ pub fn run(w: &mut World, action: &Action, ev: &GameEvent, owner: Owner) {
                 let e = &mut w.enemies[i];
                 e.slow = e.slow.max(amount.clamp(0.0, 0.85));
                 e.slow_time = e.slow_time.max(secs * duration);
-                e.flash = 0.06;
+                e.hit_flash();
             }
             w.fx.ring(ev.pos, r, palette::CYAN);
             w.fx.burst(ev.pos, &[palette::ICE, palette::CYAN, palette::BONE], 30, r * 2.5);

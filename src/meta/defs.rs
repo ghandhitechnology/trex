@@ -99,17 +99,30 @@ impl Goal {
                 let name = content.character(id).map_or(id.as_str(), |i| &content.characters[i].name);
                 format!("Survive {} as {name}", clock_text(*s))
             }
-            Goal::Kills(n) => format!("{n} kills in one run"),
+            Goal::Kills(n) => format!("{} kills in one run", grouped((*n).into())),
             Goal::Level(n) => format!("Reach level {n}"),
             Goal::Stacks(n) => format!("Stack one item {n} times"),
             Goal::Items(n) => format!("Hold {n} different items"),
-            Goal::TotalKills(n) => format!("{n} kills in total"),
-            Goal::Runs(n) => format!("Play {n} runs"),
-            Goal::Bones(n) => format!("Earn {n} bones"),
+            Goal::TotalKills(n) => format!("{} kills in total", grouped(*n)),
+            Goal::Runs(n) => format!("Play {} runs", grouped((*n).into())),
+            Goal::Bones(n) => format!("Earn {} bones", grouped(*n)),
             Goal::Heroes(n) => format!("Unlock {n} heroes"),
             Goal::Upgrades(n) => format!("Buy {n} upgrade levels"),
         }
     }
+}
+
+/// `n` in groups of three digits: 5000000 reads as 5 000 000.
+pub fn grouped(n: u64) -> String {
+    let digits = n.to_string();
+    let mut out = String::with_capacity(digits.len() * 4 / 3);
+    for (i, c) in digits.chars().enumerate() {
+        if i > 0 && (digits.len() - i).is_multiple_of(3) {
+            out.push(' ');
+        }
+        out.push(c);
+    }
+    out
 }
 
 /// What an unlock id refers to.

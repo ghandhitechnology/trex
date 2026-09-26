@@ -1,6 +1,6 @@
 //! Drawing for the hub (heroes, shop, feats) and feat banners.
 
-use super::defs::FeatReward;
+use super::defs::{FeatReward, grouped};
 use super::hub::{FLASH, Hub, Tab, shop_layout};
 use super::save::Save;
 use super::{Buy, TOAST_TIME, Toasts};
@@ -459,7 +459,7 @@ fn feats(cv: &mut Canvas, h: &Hub, save: &Save, content: &Content, _clock: f32) 
     } else if f.goal.is_time() {
         format!("{} / {}", clock_text(value), clock_text(target))
     } else {
-        format!("{} / {}", value as u64, target as u64)
+        format!("{} / {}", grouped(value as u64), grouped(target as u64))
     };
     let tw = font::width(&text);
     let bw = pw - 16 - tw;

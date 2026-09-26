@@ -20,7 +20,7 @@ trex: a roguelite for a terminal pane
 
 usage:
   trex                                  play
-  trex --dump-frames DIR [--seconds N] [--seed S] [--every SECS] [--size WxH] [--hero ID]
+  trex --dump-frames DIR [--seconds N] [--seed S] [--every SECS] [--size WxH] [--hero ID] [--save fresh|unlocked|maxed]
                                         bot run, write PNG frames (4x)
   trex --sim [--runs N] [--seed S] [--max-secs N] [--hero ID] [--save fresh|unlocked|maxed] [--items]
                                         bot runs without rendering, print survival per hero
@@ -86,6 +86,7 @@ fn run(args: &Args) -> Result<(), String> {
             every: args.parse("--every", 2.0)?,
             size: args.value("--size").map_or(Ok((256, 144)), size)?,
             hero: hero(args)?,
+            start: args.value("--save").map_or(Ok(sim::Start::Fresh), sim::Start::parse)?,
         };
         return headless::dump_frames(&opts).map_err(|e| e.to_string());
     }

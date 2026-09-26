@@ -1,4 +1,4 @@
-//! Draws a world: floor, pickups, creatures sorted by depth, shots, effects,
+//! Draws a world: floor, pickups, enemies sorted by depth, the player, shots, effects,
 //! ambience and lighting.
 
 use super::arena::{Floor, Floors, PAD};
@@ -12,11 +12,6 @@ use crate::enemies;
 use crate::enemies::director::WARN_TIME;
 use crate::game::world::World;
 use crate::meta::characters::CharacterDef;
-
-enum Body {
-    Enemy(usize),
-    Player,
-}
 
 /// `death` is the death transition progress: `None` while alive, 0 at the
 /// killing blow, 1 once the iris has closed.
@@ -79,7 +74,7 @@ pub fn draw_world(cv: &mut Canvas, w: &World, floors: Option<&Floors>, death: Op
     crate::items::draw::under(cv, w);
 
     // Shadows first so no creature's shadow covers another creature.
-    let mut bodies: Vec<(i32, Body)> = Vec::with_capacity(w.enemies.len() + 1);
+    let mut bodies: Vec<(i32, usize)> = Vec::with_capacity(w.enemies.len());
     for (i, e) in w.enemies.iter().enumerate() {
         let def = &content.enemies[e.kind];
         let f = bank.get(def.sprite_id).first();
@@ -88,24 +83,20 @@ pub fn draw_world(cv: &mut Canvas, w: &World, floors: Option<&Floors>, death: Op
             continue;
         }
         cv.blend_ellipse(x, y + f.h / 2 - 2, (f.w / 2 - 2).max(2), 2, palette::INK, 110);
-        bodies.push((y, Body::Enemy(i)));
+        bodies.push((y, i));
     }
     let (px, py) = cam.to_screen(w.player.pos);
     cv.blend_ellipse(px, py + 6, 5, 2, palette::INK, 120);
-    bodies.push((py, Body::Player));
     bodies.sort_by_key(|b| b.0);
 
     w.fx.draw_under(cv, cam);
     let ch = &content.characters[w.character];
-    for (_, b) in &bodies {
-        match *b {
-            Body::Enemy(i) => {
-                let (x, y) = cam.to_screen(w.enemies[i].pos);
-                enemies::draw::body(cv, w, i, x, y, death.is_some());
-            }
-            Body::Player => player(cv, w, ch, (px, py), death),
-        }
+    for &(_, i) in &bodies {
+        let (x, y) = cam.to_screen(w.enemies[i].pos);
+        enemies::draw::body(cv, w, i, x, y, death.is_some());
     }
+    // The player always draws over the crowd so it never gets lost in it.
+    player(cv, w, ch, (px, py), death);
 
     for s in &w.shots {
         let (x, y) = cam.to_screen(s.pos);
