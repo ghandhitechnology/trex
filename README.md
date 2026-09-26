@@ -11,11 +11,14 @@ focus.
 ## Install
 
 ```sh
-cargo install --path .
+brew install ghandhitechnology/trex/trex
 trex
 ```
 
-Needs Rust 1.85 or newer. The save lives in
+Or build it with Rust 1.85 or newer:
+`cargo install --git https://github.com/ghandhitechnology/trex`.
+
+The save lives in
 `~/Library/Application Support/trex/save.ron` on macOS
 (`~/.local/share/trex/` on Linux); `TREX_SAVE=PATH` moves it.
 
