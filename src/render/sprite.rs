@@ -24,6 +24,7 @@ pub struct Frame {
 }
 
 pub struct Sprite {
+    pub name: &'static str,
     pub frames: Vec<Frame>,
     /// Distinct non-ink colors, most common first. Used for particles.
     pub colors: Vec<u8>,
@@ -84,6 +85,10 @@ impl SpriteBank {
             None => panic!("missing sprite `{name}`"),
         }
     }
+
+    pub fn all(&self) -> &[Sprite] {
+        &self.sprites
+    }
 }
 
 static BANK: OnceLock<SpriteBank> = OnceLock::new();
@@ -128,7 +133,7 @@ pub fn compile(def: &SpriteDef) -> Result<Sprite, String> {
     }
     let mut colors: Vec<u8> = (1..32u8).filter(|&i| counts[i as usize] > 0).collect();
     colors.sort_by_key(|&i| std::cmp::Reverse(counts[i as usize]));
-    Ok(Sprite { frames, colors })
+    Ok(Sprite { name: def.name, frames, colors })
 }
 
 /// Grow by 1px each side and ring opaque pixels with ink.
