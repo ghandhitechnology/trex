@@ -88,4 +88,19 @@ pub const SPRITES: &[SpriteDef] = &[
             "yyyyy", //
         ]],
     },
+    SpriteDef {
+        name: "dash_icon",
+        outline: false,
+        frames: &[&[
+            ".........", //
+            ".I...I...", //
+            ".iI..iI..", //
+            "..iI..iI.", //
+            "...iI..iI", //
+            "..iI..iI.", //
+            ".iI..iI..", //
+            ".I...I...", //
+            ".........", //
+        ]],
+    },
 ];

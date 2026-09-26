@@ -174,12 +174,22 @@ impl Canvas {
 
     /// Nearest-neighbor enlarged sprite (UI icons, logo).
     pub fn blit_scaled(&mut self, f: &Frame, x: i32, y: i32, k: i32) {
+        self.blit_big(f, x, y, k, Blit::default());
+    }
+
+    /// Enlarged sprite with flip and flash. Alpha is ignored.
+    pub fn blit_big(&mut self, f: &Frame, x: i32, y: i32, k: i32, o: Blit) {
         for sy in 0..f.h {
             for sx in 0..f.w {
-                let idx = f.px[(sy * f.w + sx) as usize];
-                if idx != CLEAR {
-                    self.fill_rect(x + sx * k, y + sy * k, k, k, palette::color(idx));
+                let idx = f.px[(sy * f.w + if o.flip_x { f.w - 1 - sx } else { sx }) as usize];
+                if idx == CLEAR {
+                    continue;
                 }
+                let c = match o.flash {
+                    Some(fc) if idx != 0 => fc,
+                    _ => palette::color(idx),
+                };
+                self.fill_rect(x + sx * k, y + sy * k, k, k, c);
             }
         }
     }

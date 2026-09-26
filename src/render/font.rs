@@ -87,18 +87,47 @@ pub fn draw(cv: &mut Canvas, x: i32, y: i32, s: &str, c: Color) {
 }
 
 pub fn draw_scaled(cv: &mut Canvas, x: i32, y: i32, s: &str, c: Color, k: i32) {
+    draw_with(cv, x, y, s, k, |_, _| (c, 0));
+}
+
+/// Scaled text where `style(char index, glyph row)` gives each row's color and
+/// vertical offset in pixels (for gradients and wavy titles).
+pub fn draw_with(cv: &mut Canvas, x: i32, y: i32, s: &str, k: i32, style: impl Fn(usize, usize) -> (Color, i32)) {
     let mut cx = x;
-    for ch in s.chars() {
+    for (i, ch) in s.chars().enumerate() {
         let g = glyph(ch);
         for (gy, row) in g.iter().enumerate() {
+            let (c, dy) = style(i, gy);
             for (gx, b) in row.bytes().enumerate() {
                 if b == b'#' {
-                    cv.fill_rect(cx + gx as i32 * k, y + gy as i32 * k, k, k, c);
+                    cv.fill_rect(cx + gx as i32 * k, y + dy + gy as i32 * k, k, k, c);
                 }
             }
         }
         cx += (glyph_w(g) + 1) * k;
     }
+}
+
+/// Look of a big title: two-tone fill, outline color and scale.
+#[derive(Clone, Copy, Debug)]
+pub struct TitleStyle {
+    pub top: Color,
+    pub bottom: Color,
+    pub outline: Color,
+    pub k: i32,
+}
+
+/// Big title text centered on `cx`: `top` color on the upper glyph rows,
+/// `bottom` on the lower, a crisp outline with a drop shadow, and a
+/// per-letter vertical offset from `lift`.
+pub fn draw_title(cv: &mut Canvas, cx: i32, y: i32, s: &str, st: TitleStyle, lift: impl Fn(usize) -> i32) {
+    let k = st.k;
+    let x = cx - width(s) * k / 2;
+    for (dx, dy) in [(-1, -1), (0, -1), (1, -1), (-1, 0), (1, 0), (-1, 1), (0, 1), (1, 1), (-1, 2), (0, 2), (1, 2)]
+    {
+        draw_with(cv, x + dx, y + dy, s, k, |i, _| (st.outline, lift(i)));
+    }
+    draw_with(cv, x, y, s, k, |i, row| (if row < 3 { st.top } else { st.bottom }, lift(i)));
 }
 
 /// Text with a 1px outline on all eight sides, readable over any background.
