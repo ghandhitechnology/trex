@@ -139,6 +139,14 @@ impl Stat {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Stats(pub [f32; STAT_COUNT]);
 
+/// Whose stats a shot or effect uses: the hero's own (their weapon and
+/// passive), or the hero-neutral item stats.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Owner {
+    Hero,
+    Item,
+}
+
 impl Stats {
     pub fn defaults() -> Self {
         Stats(Stat::ALL.map(Stat::default_value))
@@ -425,10 +433,20 @@ impl Build {
         for (s, v) in &ch.base {
             base.set(*s, *v);
         }
+        self.with_mods(&base, ch, content)
+    }
+
+    /// The same modifiers on the default base stats. Item weapons and item
+    /// effects use these, so an item works the same on every hero.
+    pub fn item_stats(&self, ch: &CharacterDef, content: &Content) -> Stats {
+        self.with_mods(&Stats::defaults(), ch, content)
+    }
+
+    fn with_mods(&self, base: &Stats, ch: &CharacterDef, content: &Content) -> Stats {
         let item_mods =
             self.items.iter().flat_map(|&(i, n)| (0..n).flat_map(move |_| content.items[i].stats.iter()));
         let synergy_mods = self.synergies(content).flat_map(|k| content.synergies[k].stats.iter());
-        apply_mods(&base, ch.stats.iter().chain(&self.bonus).chain(item_mods).chain(synergy_mods))
+        apply_mods(base, ch.stats.iter().chain(&self.bonus).chain(item_mods).chain(synergy_mods))
     }
 
     /// Every trigger instance. Each stack adds its triggers again; active

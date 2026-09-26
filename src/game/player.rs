@@ -7,7 +7,7 @@ use super::world::{Shot, World};
 use crate::content;
 use crate::engine::{Vec2, damp};
 use crate::items::effects::GameEvent;
-use crate::items::{On, Stat};
+use crate::items::{On, Owner, Stat};
 use crate::meta::characters::Pattern;
 use crate::render::palette;
 use crate::render::sprite::SpriteId;
@@ -92,7 +92,7 @@ pub fn fire(w: &mut World, dt: f32) {
             let spread = s.get(Stat::Spread).to_radians();
             for k in 0..shots {
                 let off = (k as f32 - (shots - 1) as f32 / 2.0) * spread;
-                spawn_shot(w, pos, aim.rotate(off), 1.0, 0, ch.weapon.shot_id);
+                spawn_shot(w, Owner::Hero, pos, aim.rotate(off), 1.0, 0, ch.weapon.shot_id);
             }
             w.player.facing = if aim.x < 0.0 { -1.0 } else { 1.0 };
             w.fx.spark(pos + aim * 6.0, palette::CREAM, 40.0);
@@ -101,17 +101,25 @@ pub fn fire(w: &mut World, dt: f32) {
             let base = w.time * 0.9;
             for k in 0..shots {
                 let a = base + k as f32 / shots as f32 * TAU;
-                spawn_shot(w, pos, Vec2::from_angle(a), 1.0, 0, ch.weapon.shot_id);
+                spawn_shot(w, Owner::Hero, pos, Vec2::from_angle(a), 1.0, 0, ch.weapon.shot_id);
             }
         }
     }
     w.player.fire_cd += 1.0 / s.get(Stat::FireRate);
 }
 
-/// Spawn a player projectile using the current projectile stats.
+/// Spawn a player projectile using `owner`'s projectile stats.
 /// `ratio` scales the Damage stat.
-pub fn spawn_shot(w: &mut World, pos: Vec2, dir: Vec2, ratio: f32, depth: u8, sprite: SpriteId) {
-    let s = &w.stats;
+pub fn spawn_shot(
+    w: &mut World,
+    owner: Owner,
+    pos: Vec2,
+    dir: Vec2,
+    ratio: f32,
+    depth: u8,
+    sprite: SpriteId,
+) {
+    let s = w.stats_of(owner);
     let speed = s.get(Stat::ShotSpeed);
     w.shots.push(Shot {
         pos,
@@ -154,6 +162,7 @@ pub fn hurt(w: &mut World, dmg: i32, from: Vec2) {
     p.vel += (pos - from).norm() * 120.0;
     w.fx.shake(0.55);
     w.fx.flash = 0.08;
+    w.fx.freeze(0.07);
     w.fx.burst(pos, &[palette::RED, palette::BLOOD, palette::BONE], 14, 90.0);
     w.events.push_back(GameEvent::at(On::Hurt, pos, 0));
 }

@@ -8,33 +8,33 @@
     stage_length: 150.0,
     loop_from: 1,
     stages: [
-        (name: "TAR PITS", pool: [("grub", 4.0), ("wisp", 2.0)]),
+        (name: "TAR PITS", biome: Tarpit, pool: [("grub", 4.0), ("wisp", 2.0)]),
         (
-            name: "FERN HOLLOW", ground: Some("ktf"),
+            name: "FERN HOLLOW", biome: Fernbog,
             pool: [("grub", 4.0), ("frog", 2.0), ("beetle", 1.0), ("slime", 2.0), ("ptero", 1.0), ("mite", 1.0)],
         ),
         (
-            name: "EMBER FLATS", ground: Some("kmc"),
+            name: "EMBER FLATS", biome: Ashfall,
             pool: [("beetle", 2.0), ("boomer", 2.0), ("dilo", 2.0), ("brute", 1.0), ("mole", 2.0), ("grub", 2.0)],
         ),
         (
-            name: "FROST CAVES", ground: Some("kNb"),
+            name: "FROST CAVES", biome: Tarpit, ground: Some("kNb"),
             pool: [("shellback", 2.0), ("ptero", 2.0), ("ghost", 2.0), ("puffer", 1.0), ("slime", 2.0), ("wisp", 2.0)],
         ),
         (
-            name: "BONE DUNES", ground: Some("nzZ"),
+            name: "BONE DUNES", biome: Tarpit, ground: Some("nzZ"),
             pool: [("mole", 3.0), ("golem", 1.0), ("eyestalk", 2.0), ("broodmother", 1.0), ("beetle", 2.0), ("grub", 2.0)],
         ),
         (
-            name: "SPORE MARSH", ground: Some("nuP"),
+            name: "SPORE MARSH", biome: Fernbog, ground: Some("nuP"),
             pool: [("puffer", 2.0), ("broodmother", 1.0), ("slime", 3.0), ("boomer", 2.0), ("frog", 2.0), ("mite", 2.0)],
         ),
         (
-            name: "STORM PEAK", ground: Some("kts"),
+            name: "STORM PEAK", biome: Ashfall, ground: Some("kts"),
             pool: [("ghost", 2.0), ("eyestalk", 2.0), ("wisp", 3.0), ("dilo", 2.0), ("ptero", 2.0), ("shellback", 1.0)],
         ),
         (
-            name: "THE RIFT", ground: Some("kmu"),
+            name: "THE RIFT", biome: Ashfall, ground: Some("kmu"),
             pool: [
                 ("brute", 1.0), ("golem", 1.0), ("ghost", 1.0), ("eyestalk", 1.0), ("dilo", 1.0), ("puffer", 1.0),
                 ("boomer", 1.0), ("mole", 1.0), ("shellback", 1.0), ("broodmother", 1.0), ("ptero", 1.0), ("slime", 1.0),

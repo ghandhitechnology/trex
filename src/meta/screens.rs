@@ -8,9 +8,10 @@ use crate::content::{self, Content};
 use crate::game::clock_text;
 use crate::items::{Build, Stat};
 use crate::meta::characters::CharacterDef;
-use crate::render::arena::PAD;
+use crate::render::arena::{Floor, PAD};
 use crate::render::canvas::{Blit, Canvas};
 use crate::render::font;
+use crate::render::light;
 use crate::render::palette::{self, Color, INK};
 use crate::render::sprite::{Frame, bank};
 
@@ -62,19 +63,24 @@ fn bones_width(n: u32) -> i32 {
     11 + font::width(&n.to_string())
 }
 
-fn backdrop(cv: &mut Canvas, floor: Option<&Canvas>, clock: f32) {
+fn backdrop(cv: &mut Canvas, floor: Option<&Floor>, clock: f32) {
     match floor {
         Some(f) => {
-            let sx = ((clock * 0.06).sin() * 90.0) as i32 + f.w / 2 - cv.w / 2;
-            let sy = ((clock * 0.04).cos() * 40.0) as i32 + f.h / 2 - cv.h / 2 - PAD / 2;
-            cv.copy_view(f, sx, sy, INK);
+            let sx = ((clock * 0.06).sin() * 90.0) as i32 + f.cv.w / 2 - cv.w / 2;
+            let sy = ((clock * 0.04).cos() * 40.0) as i32 + f.cv.h / 2 - cv.h / 2 - PAD / 2;
+            cv.copy_view(&f.cv, sx, sy, INK);
+            f.ambient(cv, (sx - PAD, sy - PAD), clock);
+            cv.wash(INK, 150);
+            light::vignette(cv, (cv.w / 2, cv.h / 2), f.biome.shade(), 0.9, 200);
         }
-        None => cv.clear(palette::DUSK),
+        None => {
+            cv.clear(palette::DUSK);
+            cv.wash(INK, 150);
+        }
     }
-    cv.wash(INK, 150);
 }
 
-pub fn hub(cv: &mut Canvas, h: &Hub, save: &Save, floor: Option<&Canvas>, clock: f32) {
+pub fn hub(cv: &mut Canvas, h: &Hub, save: &Save, floor: Option<&Floor>, clock: f32) {
     let content = content::get();
     backdrop(cv, floor, clock);
     header(cv, h, save, clock);

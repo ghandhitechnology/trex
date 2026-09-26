@@ -9,7 +9,7 @@ use crate::enemies::{self, Enemy};
 use crate::engine::{DT, Grid, Rect, Rng, Vec2};
 use crate::items::effects::{self, ActiveTrigger, GameEvent};
 use crate::items::weapons::{self, Gear, ShotTag};
-use crate::items::{Build, On, Source, Stat, Stats};
+use crate::items::{Build, On, Owner, Source, Stat, Stats};
 use crate::render::camera::Camera;
 use crate::render::fx::Fx;
 use crate::render::palette;
@@ -127,6 +127,8 @@ pub struct World {
     pub player: Player,
     pub build: Build,
     pub stats: Stats,
+    /// Stats for item weapons and effects; see `Build::item_stats`.
+    pub item_stats: Stats,
     pub triggers: Vec<ActiveTrigger>,
     pub enemies: Vec<Enemy>,
     pub shots: Vec<Shot>,
@@ -162,6 +164,7 @@ impl World {
             },
             build: Build::default(),
             stats: Stats::defaults(),
+            item_stats: Stats::defaults(),
             triggers: Vec::new(),
             enemies: Vec::new(),
             shots: Vec::new(),
@@ -185,6 +188,13 @@ impl World {
         self.uid
     }
 
+    pub fn stats_of(&self, owner: Owner) -> &Stats {
+        match owner {
+            Owner::Hero => &self.stats,
+            Owner::Item => &self.item_stats,
+        }
+    }
+
     pub fn max_hp(&self) -> i32 {
         self.stats.count(Stat::MaxHp) as i32
     }
@@ -201,6 +211,7 @@ impl World {
         let ch = &content.characters[self.character];
         let old_max = self.max_hp();
         self.stats = self.build.stats(ch, content);
+        self.item_stats = self.build.item_stats(ch, content);
         let old = std::mem::take(&mut self.triggers);
         self.triggers = self
             .build
@@ -223,6 +234,7 @@ impl World {
     pub fn add_item(&mut self, item: usize) {
         self.build.add(item);
         self.refresh_build();
+        self.fx.level_up(self.player.pos);
         self.events.push_back(GameEvent::at(On::LevelUp, self.player.pos, 0));
         effects::process(self);
     }

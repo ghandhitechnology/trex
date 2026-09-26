@@ -1,4 +1,5 @@
-//! Visual-only effects: particles, damage numbers, rings, lightning, afterimages.
+//! Visual-only effects: particles, damage numbers, rings, lightning, afterimages,
+//! screen shake requests and hit stop.
 //! Uses its own RNG so gameplay stays identical with or without visuals.
 
 use super::camera::Camera;
@@ -14,9 +15,13 @@ pub struct Particle {
     pub life: f32,
     pub max: f32,
     pub color: Color,
+    /// Color it cools toward as it dies.
+    pub fade: Color,
     pub size: u8,
     pub drag: f32,
     pub grav: f32,
+    /// Drawn as a short line along its velocity.
+    pub streak: bool,
 }
 
 pub struct Text {
@@ -24,6 +29,11 @@ pub struct Text {
     pub life: f32,
     pub text: String,
     pub color: Color,
+    /// Running total for merged damage numbers.
+    pub value: f32,
+    pub crit: bool,
+    /// Seconds since the last pop (spawn or merge).
+    pub pop: f32,
 }
 
 pub struct Ring {
@@ -60,12 +70,21 @@ pub struct Fx {
     pub ghosts: Vec<Ghost>,
     /// Screen shake requested this tick, consumed by the camera.
     pub kick: f32,
-    /// Full-screen flash, seconds left.
+    /// Red hurt flash, seconds left.
     pub flash: f32,
+    /// Bright white flash for big kills, seconds left.
+    pub glare: f32,
+    /// Hit stop: seconds the world stays frozen. Only set when enabled.
+    pub hitstop: f32,
 }
 
 const MAX_PARTICLES: usize = 1500;
-const MAX_TEXTS: usize = 48;
+const MAX_TEXTS: usize = 40;
+const TEXT_LIFE: f32 = 0.7;
+const GHOST_LIFE: f32 = 0.22;
+/// Damage numbers landing this close to a fresh one merge into it.
+const MERGE_DIST: f32 = 10.0;
+const MERGE_AGE: f32 = 0.18;
 
 impl Fx {
     pub fn new(seed: u64, enabled: bool) -> Self {
@@ -79,10 +98,12 @@ impl Fx {
             ghosts: Vec::new(),
             kick: 0.0,
             flash: 0.0,
+            glare: 0.0,
+            hitstop: 0.0,
         }
     }
 
-    fn push(&mut self, p: Particle) {
+    pub fn push(&mut self, p: Particle) {
         if self.enabled && self.particles.len() < MAX_PARTICLES {
             self.particles.push(p);
         }
@@ -105,9 +126,11 @@ impl Fx {
                 life,
                 max: life,
                 color,
+                fade: palette::MAUVE,
                 size,
                 drag: 5.0,
                 grav: 0.0,
+                streak: v > 70.0,
             });
         }
     }
@@ -126,9 +149,11 @@ impl Fx {
             life,
             max: life,
             color,
+            fade: color.mix(palette::INK, 110),
             size: 1,
             drag: 6.0,
             grav: 0.0,
+            streak: false,
         });
     }
 
@@ -149,9 +174,56 @@ impl Fx {
                 life,
                 max: life,
                 color,
+                fade: color.mix(palette::INK, 120),
                 size,
                 drag: 2.0,
                 grav: 260.0,
+                streak: false,
+            });
+        }
+    }
+
+    /// The flash every enemy death shares: a quick bright ring, and for heavy
+    /// enemies a bigger ring, a shake and a short hit stop.
+    pub fn pop(&mut self, pos: Vec2, heavy: bool) {
+        if !self.enabled {
+            return;
+        }
+        self.rings.push(Ring {
+            pos,
+            radius: if heavy { 20.0 } else { 7.0 },
+            life: 0.16,
+            max: 0.16,
+            color: palette::BONE,
+        });
+        if heavy {
+            self.shake(0.3);
+            self.freeze(0.05);
+        }
+    }
+
+    /// Celebration when a level-up item is taken.
+    pub fn level_up(&mut self, pos: Vec2) {
+        if !self.enabled {
+            return;
+        }
+        self.rings.push(Ring { pos, radius: 34.0, life: 0.4, max: 0.4, color: palette::GOLD });
+        self.burst(pos, &[palette::GOLD, palette::CREAM, palette::AMBER], 22, 120.0);
+        for k in 0..10 {
+            let x = pos.x + (k as f32 - 4.5) * 3.0 + self.rng.range(-1.0, 1.0);
+            let life = self.rng.range(0.5, 0.9);
+            let rise = self.rng.range(40.0, 80.0);
+            self.push(Particle {
+                pos: Vec2::new(x, pos.y + 4.0),
+                vel: Vec2::new(0.0, -rise),
+                life,
+                max: life,
+                color: if k % 2 == 0 { palette::CREAM } else { palette::GOLD },
+                fade: palette::AMBER,
+                size: 1,
+                drag: 1.5,
+                grav: 0.0,
+                streak: true,
             });
         }
     }
@@ -164,12 +236,45 @@ impl Fx {
             self.texts.remove(0);
         }
         let jitter = Vec2::new(self.rng.range(-3.0, 3.0), self.rng.range(-2.0, 0.0));
-        self.texts.push(Text { pos: pos + jitter, life: 0.6, text, color });
+        self.texts.push(Text {
+            pos: pos + jitter,
+            life: TEXT_LIFE,
+            text,
+            color,
+            value: 0.0,
+            crit: false,
+            pop: 0.0,
+        });
     }
 
+    /// Damage number. Hits landing on a fresh number nearby add to it.
     pub fn number(&mut self, pos: Vec2, value: f32, color: Color) {
-        let v = value.round().max(1.0) as i64;
-        self.text(pos, v.to_string(), color);
+        self.damage(pos, value, color == palette::GOLD);
+    }
+
+    pub fn damage(&mut self, pos: Vec2, value: f32, crit: bool) {
+        if !self.enabled {
+            return;
+        }
+        let near = self.texts.iter_mut().rev().find(|t| {
+            t.value > 0.0
+                && t.crit == crit
+                && TEXT_LIFE - t.life < MERGE_AGE
+                && t.pos.dist_sq(pos) < MERGE_DIST.powi(2)
+        });
+        if let Some(t) = near {
+            t.value += value;
+            t.text = (t.value.round().max(1.0) as i64).to_string();
+            t.life = TEXT_LIFE;
+            t.pop = 0.0;
+            return;
+        }
+        let color = if crit { palette::GOLD } else { palette::BONE };
+        self.text(pos, (value.round().max(1.0) as i64).to_string(), color);
+        if let Some(t) = self.texts.last_mut() {
+            t.value = value;
+            t.crit = crit;
+        }
     }
 
     pub fn ring(&mut self, pos: Vec2, radius: f32, color: Color) {
@@ -182,17 +287,25 @@ impl Fx {
         if self.enabled {
             let seed = self.rng.next_u64();
             self.bolts.push(Bolt { a, b, life: 0.16, seed });
+            self.spark(b, palette::ICE, 50.0);
         }
     }
 
     pub fn ghost(&mut self, pos: Vec2, sprite: SpriteId, frame: usize, flip: bool) {
         if self.enabled {
-            self.ghosts.push(Ghost { pos, sprite, frame, flip, life: 0.22 });
+            self.ghosts.push(Ghost { pos, sprite, frame, flip, life: GHOST_LIFE });
         }
     }
 
     pub fn shake(&mut self, amount: f32) {
         self.kick += amount;
+    }
+
+    /// Freeze the world for a moment to sell a heavy hit.
+    pub fn freeze(&mut self, secs: f32) {
+        if self.enabled {
+            self.hitstop = self.hitstop.max(secs);
+        }
     }
 
     pub fn update(&mut self, dt: f32) {
@@ -204,8 +317,9 @@ impl Fx {
         }
         self.particles.retain(|p| p.life > 0.0);
         for t in &mut self.texts {
-            t.pos.y -= 22.0 * dt * (t.life / 0.6);
+            t.pos.y -= 20.0 * dt * (t.life / TEXT_LIFE);
             t.life -= dt;
+            t.pop += dt;
         }
         self.texts.retain(|t| t.life > 0.0);
         for r in &mut self.rings {
@@ -221,6 +335,7 @@ impl Fx {
         }
         self.ghosts.retain(|g| g.life > 0.0);
         self.flash = (self.flash - dt).max(0.0);
+        self.glare = (self.glare - dt).max(0.0);
     }
 
     /// Afterimages, drawn under creatures.
@@ -229,8 +344,9 @@ impl Fx {
             let (x, y) = cam.to_screen(g.pos);
             let s = bank().get(g.sprite);
             let f = &s.frames[g.frame % s.frames.len()];
-            let a = (g.life / 0.22 * 150.0) as u8;
-            cv.blit_centered(f, x, y, Blit { flip_x: g.flip, flash: Some(palette::CYAN), alpha: a });
+            let k = g.life / GHOST_LIFE;
+            let c = if k > 0.5 { palette::CYAN } else { palette::SKY };
+            cv.blit_centered(f, x, y, Blit { flip_x: g.flip, flash: Some(c), alpha: (k * 150.0) as u8 });
         }
     }
 
@@ -239,11 +355,14 @@ impl Fx {
         for r in &self.rings {
             let t = 1.0 - r.life / r.max;
             let (x, y) = cam.to_screen(r.pos);
-            let rad = (r.radius * (0.35 + 0.65 * t)) as i32;
-            if t < 0.25 {
-                cv.fill_circle(x, y, rad / 2, palette::CREAM);
+            let ease = 1.0 - (1.0 - t) * (1.0 - t);
+            let rad = (r.radius * (0.3 + 0.7 * ease)) as i32;
+            if t < 0.2 {
+                cv.fill_circle(x, y, rad * 2 / 3, palette::CREAM);
+            } else if t < 0.4 {
+                cv.blend_ellipse(x, y, rad, rad, r.color, 70);
             }
-            cv.circle(x, y, rad, r.color);
+            cv.circle(x, y, rad, if t < 0.6 { r.color } else { r.color.mix(palette::INK, 100) });
             if t < 0.5 {
                 cv.circle(x, y, rad - 1, palette::CREAM);
             }
@@ -254,6 +373,7 @@ impl Fx {
             let (bx, by) = cam.to_screen(b.b);
             let steps = 5;
             let mut prev = (ax, ay);
+            let core = if b.life > 0.08 { palette::BONE } else { palette::ICE };
             for i in 1..=steps {
                 let t = i as f32 / steps as f32;
                 let mut x = ax as f32 + (bx - ax) as f32 * t;
@@ -264,14 +384,25 @@ impl Fx {
                 }
                 let next = (x as i32, y as i32);
                 cv.line(prev.0, prev.1 + 1, next.0, next.1 + 1, palette::BLUE);
-                cv.line(prev.0, prev.1, next.0, next.1, palette::ICE);
+                cv.line(prev.0 + 1, prev.1, next.0 + 1, next.1, palette::CYAN);
+                cv.line(prev.0, prev.1, next.0, next.1, core);
                 prev = next;
             }
         }
         for p in &self.particles {
             let (x, y) = cam.to_screen(p.pos);
-            let c = if p.life < p.max * 0.3 { p.color.mix(palette::INK, 90) } else { p.color };
-            if p.size > 1 {
+            let k = p.life / p.max;
+            let c = if k > 0.55 {
+                p.color
+            } else if k > 0.25 {
+                p.color.mix(p.fade, 128)
+            } else {
+                p.fade
+            };
+            if p.streak {
+                let tail = p.vel * -0.025;
+                cv.line(x, y, x + tail.x as i32, y + tail.y as i32, c);
+            } else if p.size > 1 && k > 0.35 {
                 cv.fill_rect(x, y, 2, 2, c);
             } else {
                 cv.put(x, y, c);
@@ -279,8 +410,28 @@ impl Fx {
         }
         for t in &self.texts {
             let (x, y) = cam.to_screen(t.pos);
+            // Pop up on spawn and on every merge, then cool down before vanishing.
+            let lift = if t.pop < 0.05 {
+                2
+            } else if t.pop < 0.1 {
+                1
+            } else {
+                0
+            };
+            let (fill, edge) = match (t.crit, t.life / TEXT_LIFE) {
+                (true, k) if k > 0.3 => {
+                    (if t.pop < 0.06 { palette::CREAM } else { t.color }, palette::MAROON)
+                }
+                (false, k) if k > 0.3 => (if t.pop < 0.06 { palette::CREAM } else { t.color }, palette::INK),
+                (_, _) => (t.color.mix(palette::MAUVE, 150), palette::INK),
+            };
             let w = font::width(&t.text);
-            font::draw_outlined(cv, x - w / 2, y - 3, &t.text, t.color, palette::INK);
+            let y = y - 3 - lift;
+            if t.crit {
+                font::draw_big(cv, x - w / 2, y, &t.text, fill, edge, 1);
+            } else {
+                font::draw_outlined(cv, x - w / 2, y, &t.text, fill, edge);
+            }
         }
     }
 }

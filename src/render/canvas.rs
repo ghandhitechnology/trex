@@ -177,12 +177,22 @@ impl Canvas {
 
     /// Nearest-neighbor enlarged sprite (UI icons, logo).
     pub fn blit_scaled(&mut self, f: &Frame, x: i32, y: i32, k: i32) {
+        self.blit_big(f, x, y, k, Blit::default());
+    }
+
+    /// Enlarged sprite with flip and flash. Alpha is ignored.
+    pub fn blit_big(&mut self, f: &Frame, x: i32, y: i32, k: i32, o: Blit) {
         for sy in 0..f.h {
             for sx in 0..f.w {
-                let idx = f.px[(sy * f.w + sx) as usize];
-                if idx != CLEAR {
-                    self.fill_rect(x + sx * k, y + sy * k, k, k, palette::color(idx));
+                let idx = f.px[(sy * f.w + if o.flip_x { f.w - 1 - sx } else { sx }) as usize];
+                if idx == CLEAR {
+                    continue;
                 }
+                let c = match o.flash {
+                    Some(fc) if idx != 0 => fc,
+                    _ => palette::color(idx),
+                };
+                self.fill_rect(x + sx * k, y + sy * k, k, k, c);
             }
         }
     }
@@ -201,6 +211,24 @@ impl Canvas {
                 let xx = sx + x;
                 self.px[row + x as usize] =
                     if xx < 0 || xx >= src.w { fill } else { src.px[(yy * src.w + xx) as usize] };
+            }
+        }
+    }
+
+    /// Like `copy_view`, but blends `src` over the frame by `a`. Pixels
+    /// outside `src` are left alone.
+    pub fn blend_view(&mut self, src: &Canvas, sx: i32, sy: i32, a: u8) {
+        for y in 0..self.h {
+            let yy = sy + y;
+            if yy < 0 || yy >= src.h {
+                continue;
+            }
+            for x in 0..self.w {
+                let xx = sx + x;
+                if xx >= 0 && xx < src.w {
+                    let i = (y * self.w + x) as usize;
+                    self.px[i] = self.px[i].mix(src.px[(yy * src.w + xx) as usize], a);
+                }
             }
         }
     }

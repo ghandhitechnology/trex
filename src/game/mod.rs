@@ -73,7 +73,7 @@ pub enum Signal {
     Quit,
 }
 
-const DEATH_TIME: f32 = 1.4;
+pub const DEATH_TIME: f32 = 1.4;
 const MENU_GUARD: f32 = 0.35;
 
 pub struct Game {
@@ -86,13 +86,15 @@ pub struct Game {
     /// UI animation clock, seconds.
     pub clock: f32,
     pub view: (i32, i32),
-    pub floor: Option<Canvas>,
+    pub floors: Option<arena::Floors>,
     /// Feat banners shown on menus.
     pub toasts: Toasts,
     seed: u64,
     runs: u64,
     visuals: bool,
     recorded: bool,
+    /// A Space press that landed during hit stop, replayed on the next step.
+    held_dash: bool,
 }
 
 impl Game {
@@ -121,12 +123,13 @@ impl Game {
             quit_prompt: false,
             clock: 0.0,
             view,
-            floor: visuals.then(|| arena::floor(world::ARENA, seed)),
+            floors: visuals.then(|| arena::Floors::new(world::ARENA, seed)),
             toasts,
             seed,
             runs: 0,
             visuals,
             recorded: false,
+            held_dash: false,
         };
         if game.toasts.current().is_some() {
             game.store_save();
@@ -148,7 +151,11 @@ impl Game {
         w.refresh_build();
         w.player.hp = w.max_hp();
         self.world = Some(w);
+        if self.visuals {
+            self.floors = Some(arena::Floors::new(world::ARENA, seed));
+        }
         self.recorded = false;
+        self.held_dash = false;
         self.scene = Scene::Playing;
     }
 
@@ -218,7 +225,13 @@ impl Game {
                     return Signal::None;
                 }
                 let w = self.world.as_mut().expect("playing without a world");
-                w.step(c);
+                if w.fx.hitstop > 0.0 {
+                    w.fx.hitstop -= DT;
+                    self.held_dash |= c.dash;
+                    return Signal::None;
+                }
+                let c = Controls { dash: c.dash || std::mem::take(&mut self.held_dash), ..*c };
+                w.step(&c);
                 if w.player.hp <= 0 {
                     let pos = w.player.pos;
                     w.fx.burst(pos, &[palette::LIME, palette::LEAF, palette::BONE, palette::RED], 40, 140.0);
@@ -339,22 +352,28 @@ impl Game {
 
     pub fn render(&self, cv: &mut Canvas) {
         match (&self.scene, &self.world) {
-            (Scene::Hub(hub), _) => meta::screens::hub(cv, hub, &self.save, self.floor.as_ref(), self.clock),
+            (Scene::Hub(hub), _) => meta::screens::hub(
+                cv,
+                hub,
+                &self.save,
+                self.floors.as_ref().map(arena::Floors::menu),
+                self.clock,
+            ),
             (Scene::Title, _) | (_, None) => ui::screens::title(cv, self),
             (scene, Some(w)) => {
-                scene::draw_world(
-                    cv,
-                    w,
-                    self.floor.as_ref(),
-                    matches!(scene, Scene::Dying(_) | Scene::Dead(_)),
-                );
-                if matches!(scene, Scene::Playing | Scene::Paused | Scene::Dying(_)) {
+                let death = match scene {
+                    Scene::Dying(t) => Some(1.0 - t / DEATH_TIME),
+                    Scene::Dead(_) => Some(1.0),
+                    _ => None,
+                };
+                scene::draw_world(cv, w, self.floors.as_ref(), death);
+                if matches!(scene, Scene::Playing | Scene::Paused) {
                     ui::hud::draw(cv, w, self.clock);
                 }
                 match scene {
-                    Scene::Paused => ui::screens::paused(cv, self.clock),
+                    Scene::Paused => ui::screens::paused(cv, w, self.clock),
                     Scene::LevelUp(o) => ui::screens::level_up(cv, w, o, self.clock),
-                    Scene::Dead(s) => ui::screens::dead(cv, s, self.clock),
+                    Scene::Dead(s) => ui::screens::dead(cv, w, s, self.clock),
                     _ => {}
                 }
             }

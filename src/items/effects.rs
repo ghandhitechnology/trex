@@ -3,7 +3,7 @@
 //! capped by `MAX_DEPTH` so chain reactions stay bounded.
 
 use super::weapons::{self, Mine};
-use super::{Action, On, Source, Stat, StatMod};
+use super::{Action, On, Owner, Source, Stat, StatMod};
 use crate::engine::Vec2;
 use crate::game::player;
 use crate::game::world::World;
@@ -44,6 +44,11 @@ impl super::Trigger {
     pub fn initial_cd(&self) -> f32 {
         if self.on == On::Timer { self.cooldown } else { 0.0 }
     }
+
+    /// Item triggers use item stats; the hero's own passive uses hero stats.
+    pub fn owned_by(&self) -> Owner {
+        if self.owner.is_some() { Owner::Item } else { Owner::Hero }
+    }
 }
 
 /// Tick cooldowns, fire timers, then drain the event queue.
@@ -53,10 +58,10 @@ pub fn tick(w: &mut World, dt: f32) {
         t.cd -= dt;
         if t.def.on == On::Timer && t.cd <= 0.0 {
             t.cd = t.def.cooldown.max(0.1);
-            let (chance, action) = (t.def.chance, t.def.action);
+            let (chance, action, owner) = (t.def.chance, t.def.action, t.def.owned_by());
             if chance >= 1.0 || w.rng.chance(chance) {
                 let ev = GameEvent::at(On::Timer, w.player.pos, 0);
-                run(w, &action, &ev);
+                run(w, &action, &ev, owner);
             }
         }
     }
@@ -82,21 +87,24 @@ pub fn process(w: &mut World) {
             if t.def.from.is_some_and(|f| f != ev.source) {
                 continue;
             }
-            let (chance, cooldown, action) = (t.def.chance, t.def.cooldown, t.def.action);
+            let (chance, cooldown, action, owner) =
+                (t.def.chance, t.def.cooldown, t.def.action, t.def.owned_by());
             if chance < 1.0 && !w.rng.chance(chance) {
                 continue;
             }
             w.triggers[i].cd = cooldown;
-            run(w, &action, &ev);
+            run(w, &action, &ev, owner);
         }
     }
 }
 
-/// Carry out one action for an event. Damage it deals is one generation deeper.
-pub fn run(w: &mut World, action: &Action, ev: &GameEvent) {
-    let damage = w.stats.get(Stat::Damage);
-    let area = w.stats.get(Stat::Area);
-    let duration = w.stats.get(Stat::Duration);
+/// Carry out one action for an event with `owner`'s stats. Damage it deals
+/// is one generation deeper.
+pub fn run(w: &mut World, action: &Action, ev: &GameEvent, owner: Owner) {
+    let stats = *w.stats_of(owner);
+    let damage = stats.get(Stat::Damage);
+    let area = stats.get(Stat::Area);
+    let duration = stats.get(Stat::Duration);
     let depth = ev.depth + 1;
     match *action {
         Action::Burn { dps, secs } => {
@@ -119,7 +127,7 @@ pub fn run(w: &mut World, action: &Action, ev: &GameEvent) {
             let base = w.rng.angle();
             for k in 0..count {
                 let a = base + k as f32 / count.max(1) as f32 * std::f32::consts::TAU;
-                player::spawn_shot(w, ev.pos, Vec2::from_angle(a), ratio, depth, spark);
+                player::spawn_shot(w, owner, ev.pos, Vec2::from_angle(a), ratio, depth, spark);
                 tag_last(w, Source::Nova);
             }
         }
@@ -138,7 +146,7 @@ pub fn run(w: &mut World, action: &Action, ev: &GameEvent) {
         Action::Volley { count, damage: ratio } => {
             let pos = w.player.pos;
             let shot = crate::content::get().characters[w.character].weapon.shot_id;
-            let range = w.stats.get(Stat::Range);
+            let range = stats.get(Stat::Range);
             let mut taken: Vec<u32> = Vec::new();
             for _ in 0..count {
                 let target = w.nearest_enemy(pos, range, |e| !taken.contains(&e.uid));
@@ -149,7 +157,7 @@ pub fn run(w: &mut World, action: &Action, ev: &GameEvent) {
                     }
                     None => Vec2::from_angle(w.rng.angle()),
                 };
-                player::spawn_shot(w, pos, dir, ratio, depth, shot);
+                player::spawn_shot(w, owner, pos, dir, ratio, depth, shot);
                 tag_last(w, Source::Volley);
             }
         }

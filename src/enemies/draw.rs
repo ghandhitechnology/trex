@@ -11,8 +11,10 @@ use crate::render::font;
 use crate::render::palette::{self, CLEAR, Color, INK};
 use crate::render::sprite::{Frame, bank};
 
+/// Seconds an enemy shows as a bright silhouette after spawning.
+const SPAWN_POP: f32 = 0.12;
 /// Seconds the ground takes to shift to a new stage's colors.
-const GROUND_FADE: f32 = 3.0;
+pub const GROUND_FADE: f32 = 3.0;
 /// How much of the original floor color survives the recolor (0-255).
 const GROUND_KEEP: u8 = 70;
 
@@ -181,8 +183,9 @@ fn dashed(cv: &mut Canvas, x0: i32, y0: i32, x1: i32, y1: i32, c: Color, on: boo
     }
 }
 
-/// One enemy at screen position (x, y).
-pub fn body(cv: &mut Canvas, w: &World, i: usize, x: i32, y: i32) {
+/// One enemy at screen position (x, y). `frozen` skips the spawn pop while
+/// the death transition plays.
+pub fn body(cv: &mut Canvas, w: &World, i: usize, x: i32, y: i32, frozen: bool) {
     let content = content::get();
     let bank = bank();
     let e = &w.enemies[i];
@@ -203,7 +206,9 @@ pub fn body(cv: &mut Canvas, w: &World, i: usize, x: i32, y: i32) {
     let s = bank.get(def.sprite_id);
     let f = s.frame_at(e.anim + e.phase, 6.0);
     let flip = if e.vel.x.abs() > 1.0 { e.vel.x < 0.0 } else { w.player.pos.x < e.pos.x };
-    let flash = if e.flash > 0.0 {
+    let flash = if e.anim < SPAWN_POP && !frozen {
+        Some(palette::CREAM)
+    } else if e.flash > 0.0 {
         Some(if e.shield > 0.0 { palette::ICE } else { palette::BONE })
     } else if windup && blinking(e.timer, 20.0) {
         Some(palette::RED)
@@ -215,6 +220,13 @@ pub fn body(cv: &mut Canvas, w: &World, i: usize, x: i32, y: i32) {
         aura(cv, f, x, y, flip, el.color(), a.clamp(0, 255) as u8);
     }
     cv.blit_centered(f, x, y, Blit { flip_x: flip, flash, alpha: 255 });
+    if e.burn_time > 0.0 {
+        burning(cv, x, y - f.h / 2, e.anim + e.phase * 3.0);
+    }
+    if e.slow_time > 0.0 {
+        let k = ((e.anim * 6.0) as i32).rem_euclid((f.w - 2).max(1));
+        cv.put(x - f.w / 2 + 1 + k, y + f.h / 2 - 2, palette::ICE);
+    }
     if e.shield > 0.0 && e.shield_max > 0.0 {
         let r = def.radius as i32 + 4;
         let a = (60.0 + 140.0 * e.shield / e.shield_max) as u8;
@@ -224,12 +236,31 @@ pub fn body(cv: &mut Canvas, w: &World, i: usize, x: i32, y: i32) {
     }
     let big = def.hp >= 40.0 || e.elite.is_some();
     if def.boss().is_none() && big && e.hp < e.max_hp {
-        let bw = 12;
-        let fill = ((e.hp / e.max_hp) * bw as f32).ceil() as i32;
-        let by = y - f.h / 2 - 3;
-        cv.fill_rect(x - bw / 2 - 1, by - 1, bw + 2, 3, INK);
-        cv.fill_rect(x - bw / 2, by, fill, 1, palette::RED);
+        hp_bar(cv, x, y - f.h / 2 - 3, e.hp / e.max_hp);
     }
+}
+
+/// Small flickering flames above a burning enemy.
+fn burning(cv: &mut Canvas, x: i32, top: i32, t: f32) {
+    for k in 0..3 {
+        let ph = t * 7.0 + k as f32 * 2.1;
+        let h = (ph.fract() * 5.0) as i32;
+        let fx = x - 3 + k * 3 + (ph * 1.7).sin().round() as i32;
+        let c = match h {
+            0 | 1 => palette::GOLD,
+            2 | 3 => palette::EMBER,
+            _ => palette::BLOOD,
+        };
+        cv.put(fx, top + 2 - h, c);
+    }
+}
+
+fn hp_bar(cv: &mut Canvas, x: i32, y: i32, frac: f32) {
+    let bw = 12;
+    let fill = (frac.clamp(0.0, 1.0) * bw as f32).ceil() as i32;
+    cv.fill_rect(x - bw / 2 - 1, y - 1, bw + 2, 3, INK);
+    cv.fill_rect(x - bw / 2, y, bw, 1, palette::MAROON);
+    cv.fill_rect(x - bw / 2, y, fill, 1, palette::RED);
 }
 
 /// Colored one-pixel rim just outside the sprite's ink outline.

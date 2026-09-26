@@ -8,6 +8,7 @@ use super::{Elite, Enemy, EnemyDef};
 use crate::content;
 use crate::engine::Vec2;
 use crate::game::world::World;
+use crate::render::arena::Biome;
 use crate::render::palette::{self, Color};
 
 #[derive(Deserialize, Debug)]
@@ -43,6 +44,9 @@ pub struct WavesDef {
 #[serde(deny_unknown_fields)]
 pub struct Stage {
     pub name: String,
+    /// Arena look: floor, props, walls, and ambience.
+    #[serde(default)]
+    pub biome: Biome,
     /// Three palette characters (dark, mid, light) the floor is recolored to.
     #[serde(default)]
     pub ground: Option<String>,

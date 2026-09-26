@@ -25,7 +25,7 @@ pub fn under(cv: &mut Canvas, w: &World) {
     let (px, py) = cam.to_screen(w.player.pos);
     for (k, a) in w.gear.weapons.iter().enumerate() {
         let WeaponKind::Aura { radius, .. } = a.kind else { continue };
-        let r = (radius * a.area * w.stats.get(super::Stat::Area)) as i32;
+        let r = (radius * a.area * w.item_stats.get(super::Stat::Area)) as i32;
         let (c1, c2) = tint(a.sprite);
         let t = w.gear.pulse * 2.0 + k as f32;
         cv.blend_ellipse(px, py + 2, r, r * 3 / 4, c1, 34 + (t.sin() * 10.0) as u8);
@@ -107,11 +107,12 @@ pub fn over(cv: &mut Canvas, w: &World) {
     }
 }
 
-/// Active item cooldowns (bottom left) and the synergy banner.
+/// Active item cooldowns (bottom left, above the dash strip) and the synergy
+/// banner, which drops below the boss bar and stage banner when they show.
 pub fn hud(cv: &mut Canvas, w: &World, clock: f32) {
     let content = content::get();
     let mut shown: Vec<usize> = Vec::new();
-    let y = cv.h - 25;
+    let y = cv.h - 33;
     for t in w.triggers.iter().filter(|t| t.def.on == On::Active) {
         let Some(item) = t.def.owner else { continue };
         if shown.contains(&item) {
@@ -147,7 +148,15 @@ pub fn hud(cv: &mut Canvas, w: &World, clock: f32) {
         let age = BANNER_TIME - t;
         let drop = ((0.18 - age).max(0.0) * 60.0) as i32;
         let cx = cv.w / 2;
-        let top = 22 - drop;
+        let boss = w.enemies.iter().any(|e| !e.dead && content.enemies[e.kind].boss().is_some());
+        let base = if w.director.banner.is_some() {
+            (cv.h as f32 * 0.24) as i32 + 16
+        } else if boss {
+            33
+        } else {
+            22
+        };
+        let top = base - drop;
         font::draw_centered(cv, cx, top, "COMBO", palette::PINK, INK);
         let color = if (age * 8.0) as i32 % 2 == 0 && age < 0.6 { palette::CREAM } else { palette::GOLD };
         font::draw_big_centered(cv, cx, top + 8, &s.name, color, INK, 2);
@@ -165,5 +174,5 @@ pub fn card_tag(cv: &mut Canvas, content: &Content, build: &Build, item: usize, 
     } else {
         (format!("X{}", stacks + 1), palette::GOLD)
     };
-    font::draw_outlined(cv, x + card_w - 3 - font::width(&tag), y + 3, &tag, color, INK);
+    font::draw_outlined(cv, x + card_w - 3 - font::width(&tag), y + 4, &tag, color, INK);
 }

@@ -32,7 +32,8 @@ pub enum Death {
     Spores,
 }
 
-const MAX_PARTICLES: usize = 1500;
+/// Seconds of white flash when a boss dies.
+pub const GLARE: f32 = 0.2;
 
 pub fn play(w: &mut World, pos: Vec2, kind: usize, boss: bool) {
     if !w.fx.enabled {
@@ -44,7 +45,8 @@ pub fn play(w: &mut World, pos: Vec2, kind: usize, boss: bool) {
     let fx = &mut w.fx;
     if boss {
         fx.shake(1.0);
-        fx.flash = 0.08;
+        fx.freeze(0.12);
+        fx.glare = GLARE;
         for (k, c) in [palette::CREAM, palette::GOLD, palette::EMBER, palette::RED].into_iter().enumerate() {
             fx.ring(pos, 24.0 + k as f32 * 16.0, c);
         }
@@ -53,10 +55,12 @@ pub fn play(w: &mut World, pos: Vec2, kind: usize, boss: bool) {
         drift(fx, pos, &colors, 30, -40.0, 1.4);
         return;
     }
+    let heavy = def.hp >= 40.0;
+    fx.pop(pos, heavy);
     match def.death {
         Death::Pop => {
-            fx.debris(pos, &colors, 10);
-            fx.burst(pos, &[palette::BONE, palette::CREAM], 5, 60.0);
+            fx.debris(pos, &colors, if heavy { 22 } else { 10 });
+            fx.burst(pos, &[palette::BONE, palette::CREAM], if heavy { 12 } else { 5 }, 70.0);
         }
         Death::Splat => {
             for _ in 0..16 {
@@ -120,7 +124,6 @@ fn drift(fx: &mut Fx, pos: Vec2, colors: &[Color], n: usize, lift: f32, life: f3
 
 #[allow(clippy::too_many_arguments)]
 fn push(fx: &mut Fx, pos: Vec2, vel: Vec2, color: Color, size: u8, life: f32, drag: f32, grav: f32) {
-    if fx.particles.len() < MAX_PARTICLES {
-        fx.particles.push(Particle { pos, vel, life, max: life, color, size, drag, grav });
-    }
+    let fade = color.mix(palette::INK, 110);
+    fx.push(Particle { pos, vel, life, max: life, color, fade, size, drag, grav, streak: false });
 }

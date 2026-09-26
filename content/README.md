@@ -298,7 +298,7 @@ two frames each. Compare heroes with `trex --sim --runs 20 --hero ID`.
     loop_from: 1,          // optional, stage to loop back to after the last
     stages: [
         (name: "TAR PITS", pool: [("grub", 4.0), ("wisp", 2.0)]),   // (enemy id, weight)
-        (name: "FERN HOLLOW", ground: Some("ktf"), pool: [("frog", 2.0)]),
+        (name: "FROST CAVES", biome: Tarpit, ground: Some("kNb"), pool: [("frog", 2.0)]),
     ],
     events: [              // optional scripted groups
         (at: 60.0, every: 120.0, enemy: "wisp", count: 14, shape: Ring),
@@ -314,9 +314,10 @@ first. Event `shape` is `Ring` (circle around the player) or `Cluster` (one
 group off screen); `every` (optional) repeats the event, and counts grow 15%
 per minute.
 
-Stages change every `stage_length` seconds with a banner. `ground` (optional)
-is three palette characters (dark, mid, light) the floor is recolored to; the
-shift fades in over 3 seconds. After the last stage the list loops from
+Stages change every `stage_length` seconds with a banner. `biome` (optional,
+default `Tarpit`) picks the arena look: `Tarpit`, `Fernbog` or `Ashfall`.
+`ground` (optional) is three palette characters (dark, mid, light) the floor
+is recolored to on top of the biome. Both fade in over 3 seconds. After the last stage the list loops from
 `loop_from`, and HP, credits, and elite odds keep growing, so endless runs
 keep escalating.
 

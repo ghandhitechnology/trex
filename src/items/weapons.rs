@@ -12,7 +12,7 @@ use serde::Deserialize;
 
 use super::effects::{self, GameEvent};
 use super::synergy::Upgrade;
-use super::{Action, On, Source, Stat, StatMod, apply_mods};
+use super::{Action, On, Owner, Source, Stat, StatMod, apply_mods};
 use crate::content;
 use crate::engine::Vec2;
 use crate::game::Controls;
@@ -237,14 +237,11 @@ pub struct Gear {
     pub banner: Option<(usize, f32)>,
     /// Aura pulse clock for drawing.
     pub pulse: f32,
-    /// Character FireRate before items; weapon rates scale by FireRate / this.
-    base_rate: f32,
 }
 
-impl Gear {
-    fn haste(&self, stats: &super::Stats) -> f32 {
-        (stats.get(Stat::FireRate) / self.base_rate.max(0.1)).max(0.1)
-    }
+/// Weapon rate multiplier from FireRate bonuses.
+fn haste(stats: &super::Stats) -> f32 {
+    (stats.get(Stat::FireRate) / Stat::FireRate.default_value()).max(0.1)
 }
 
 /// Rebuild weapons and reapply buffs after the build or buffs changed.
@@ -254,9 +251,8 @@ pub fn refresh(w: &mut World) {
     if !w.gear.buffs.is_empty() {
         let mods: Vec<StatMod> = w.gear.buffs.iter().map(|b| b.m.clone()).collect();
         w.stats = apply_mods(&w.stats, &mods);
+        w.item_stats = apply_mods(&w.item_stats, &mods);
     }
-    let ch = &content.characters[w.character];
-    w.gear.base_rate = ch.base.get(&Stat::FireRate).copied().unwrap_or(Stat::FireRate.default_value());
 
     let synergies: Vec<usize> = w.build.synergies(content).collect();
     let old = std::mem::take(&mut w.gear.weapons);
@@ -309,7 +305,7 @@ pub fn update(w: &mut World, c: &Controls, dt: f32) {
         }
     }
 
-    let haste = w.gear.haste(&w.stats);
+    let haste = haste(&w.item_stats);
     for k in 0..w.gear.weapons.len() {
         let a = &mut w.gear.weapons[k];
         for t in &mut a.touched {
@@ -356,12 +352,12 @@ pub fn update(w: &mut World, c: &Controls, dt: f32) {
 
 /// Count for one attack: the weapon's count plus the Shots stat bonus.
 fn count(w: &World, k: usize) -> u32 {
-    w.gear.weapons[k].count + w.stats.count(Stat::Shots).saturating_sub(1)
+    w.gear.weapons[k].count + w.item_stats.count(Stat::Shots).saturating_sub(1)
 }
 
 /// Radius after the weapon's own multiplier and Area.
 fn scaled(w: &World, k: usize, r: f32) -> f32 {
-    r * w.gear.weapons[k].area * w.stats.get(Stat::Area)
+    r * w.gear.weapons[k].area * w.item_stats.get(Stat::Area)
 }
 
 /// A hit from an item weapon (`weapon` set) or an item effect. Weapon hits
@@ -378,8 +374,8 @@ pub fn hit(
     if !w.enemies[i].hittable() {
         return;
     }
-    let crit = weapon.is_some() && w.rng.chance(w.stats.get(Stat::Crit));
-    let damage = if crit { damage * w.stats.get(Stat::CritDamage) } else { damage };
+    let crit = weapon.is_some() && w.rng.chance(w.item_stats.get(Stat::Crit));
+    let damage = if crit { damage * w.item_stats.get(Stat::CritDamage) } else { damage };
     let pos = w.enemies[i].pos;
     w.damage_enemy(i, Hit { damage, knock, crit, depth, procs: true, source });
     if let Some(k) = weapon {
@@ -392,14 +388,14 @@ pub fn on_hit(w: &mut World, k: usize, i: usize, pos: Vec2, source: Source, dept
     for j in 0..w.gear.weapons.get(k).map_or(0, |a| a.on_hit.len()) {
         let action = w.gear.weapons[k].on_hit[j];
         let ev = GameEvent { on: On::Hit, pos, target: Some(i), depth, source };
-        effects::run(w, &action, &ev);
+        effects::run(w, &action, &ev, Owner::Item);
     }
 }
 
 fn on_end(w: &mut World, k: usize, pos: Vec2, source: Source, depth: u8) {
     if let Some(action) = w.gear.weapons.get(k).and_then(|a| a.on_end) {
         let ev = GameEvent { on: On::Hit, pos, target: None, depth, source };
-        effects::run(w, &action, &ev);
+        effects::run(w, &action, &ev, Owner::Item);
     }
 }
 
@@ -416,7 +412,7 @@ fn gun(
 ) -> bool {
     let pos = w.player.pos;
     let n = count(w, k);
-    let reach = w.stats.get(Stat::Range) * range;
+    let reach = w.item_stats.get(Stat::Range) * range;
     let dirs: Vec<Vec2> = if arc >= 360.0 {
         let base = w.time * 1.7;
         (0..n).map(|j| Vec2::from_angle(base + j as f32 / n as f32 * TAU)).collect()
@@ -429,7 +425,7 @@ fn gun(
     let a = &w.gear.weapons[k];
     let (ratio, sprite, extra_pierce, extra_bounce) = (a.damage, a.sprite, a.pierce, a.bounce);
     for dir in dirs {
-        player::spawn_shot(w, pos, dir, ratio, 0, sprite);
+        player::spawn_shot(w, Owner::Item, pos, dir, ratio, 0, sprite);
         let s = w.shots.last_mut().expect("shot just spawned");
         tag_gun(s, k, speed, range, pierce + extra_pierce, bounce + extra_bounce, motion);
     }
@@ -495,10 +491,10 @@ pub fn blades(w: &World, k: usize) -> Vec<Vec2> {
 }
 
 fn orbit(w: &mut World, k: usize) {
-    let size = BLADE_RADIUS * w.stats.get(Stat::ShotSize);
+    let size = BLADE_RADIUS * w.item_stats.get(Stat::ShotSize);
     let hit_gap = 1.0 / w.gear.weapons[k].rate.max(0.05);
-    let damage = w.gear.weapons[k].damage * w.stats.get(Stat::Damage);
-    let knock = w.stats.get(Stat::Knockback);
+    let damage = w.gear.weapons[k].damage * w.item_stats.get(Stat::Damage);
+    let knock = w.item_stats.get(Stat::Knockback);
     for pos in blades(w, k) {
         for i in w.enemies_in(pos, size) {
             let uid = w.enemies[i].uid;
@@ -515,7 +511,7 @@ fn orbit(w: &mut World, k: usize) {
 
 fn zap(w: &mut World, k: usize, jumps: u32, range: f32) -> bool {
     let reach = scaled(w, k, range);
-    let damage = w.gear.weapons[k].damage * w.stats.get(Stat::Damage);
+    let damage = w.gear.weapons[k].damage * w.item_stats.get(Stat::Damage);
     let mut struck: Vec<u32> = Vec::new();
     let mut fired = false;
     for _ in 0..count(w, k) {
@@ -542,8 +538,8 @@ fn beam(w: &mut World, k: usize, length: f32, width: f32) -> bool {
     let pos = w.player.pos;
     let len = length * w.gear.weapons[k].area;
     let half = scaled(w, k, width) / 2.0;
-    let damage = w.gear.weapons[k].damage * w.stats.get(Stat::Damage);
-    let knock = w.stats.get(Stat::Knockback) * 0.5;
+    let damage = w.gear.weapons[k].damage * w.item_stats.get(Stat::Damage);
+    let knock = w.item_stats.get(Stat::Knockback) * 0.5;
     let sprite = w.gear.weapons[k].sprite;
     let enemies = &content::get().enemies;
     let mut aimed: Vec<u32> = Vec::new();
@@ -578,8 +574,8 @@ fn drop_mines(w: &mut World, k: usize, radius: f32, secs: f32) {
     let pos = w.player.pos;
     for j in 0..n {
         let off = if n > 1 { Vec2::from_angle(w.rng.angle()) * (4.0 + j as f32 * 3.0) } else { Vec2::ZERO };
-        let life = secs * w.stats.get(Stat::Duration);
-        let damage = ratio * w.stats.get(Stat::Damage);
+        let life = secs * w.item_stats.get(Stat::Duration);
+        let damage = ratio * w.item_stats.get(Stat::Damage);
         place_mine(
             w,
             Mine { pos: pos + off, arm: 0.5, life, radius: r, damage, weapon: Some(k), depth: 0, sprite },
@@ -621,9 +617,9 @@ fn update_mines(w: &mut World, dt: f32) {
 
 fn aura(w: &mut World, k: usize, radius: f32, slow: f32) {
     let r = scaled(w, k, radius);
-    let damage = w.gear.weapons[k].damage * w.stats.get(Stat::Damage);
+    let damage = w.gear.weapons[k].damage * w.item_stats.get(Stat::Damage);
     let pos = w.player.pos;
-    let secs = w.stats.get(Stat::Duration);
+    let secs = w.item_stats.get(Stat::Duration);
     for i in w.enemies_in(pos, r) {
         if slow > 0.0 {
             let e = &mut w.enemies[i];
@@ -641,7 +637,7 @@ fn call_meteors(w: &mut World, k: usize, radius: f32) -> bool {
     let (ratio, sprite) = (a.damage, a.sprite);
     let r = scaled(w, k, radius);
     let n = count(w, k);
-    let damage = ratio * w.stats.get(Stat::Damage);
+    let damage = ratio * w.item_stats.get(Stat::Damage);
     rain(w, n, r, damage, Some(k), 0, sprite)
 }
 
