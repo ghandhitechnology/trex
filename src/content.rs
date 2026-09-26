@@ -84,7 +84,10 @@ impl Content {
         for ch in &mut self.characters {
             let owner = format!("character `{}`", ch.id);
             ch.sprite_id = sprite(&ch.sprite, &owner)?;
-            ch.idle_id = (!ch.idle.is_empty()).then(|| sprite(&ch.idle, &owner)).transpose()?;
+            let pose = |name: &str| (!name.is_empty()).then(|| sprite(name, &owner)).transpose();
+            ch.idle_id = pose(&ch.idle)?;
+            ch.attack_id = pose(&ch.attack)?;
+            ch.dash_id = pose(&ch.dash)?;
             ch.weapon.shot_id = sprite(&ch.weapon.shot, &owner)?;
         }
         self.waves.resolve(&self.enemies)?;

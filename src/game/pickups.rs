@@ -38,6 +38,9 @@ pub fn update(w: &mut World, dt: f32) {
     for _ in 0..collected.min(3) {
         w.fx.spark(target + Vec2::new(0.0, -2.0), palette::CYAN, 45.0);
     }
+    if collected > 0 {
+        w.fx.xp_pulse();
+    }
 
     // Keep the count bounded by folding the oldest gem into the next one.
     while w.gems.len() > MAX_GEMS {

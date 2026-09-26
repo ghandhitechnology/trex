@@ -8,16 +8,8 @@ use crate::content::{self, Content};
 use crate::game::world::World;
 use crate::render::canvas::{Blit, Canvas};
 use crate::render::font::{self, TitleStyle};
-use crate::render::palette::{self, Color, INK};
-use crate::render::sprite::{SpriteId, bank};
-
-/// The two main colors of a sprite, for tinting beams and auras.
-fn tint(sprite: SpriteId) -> (Color, Color) {
-    let c = &bank().get(sprite).colors;
-    let first = c.first().copied().map_or(palette::BONE, palette::color);
-    let second = c.get(1).copied().map_or(first, palette::color);
-    (first, second)
-}
+use crate::render::palette::{self, INK};
+use crate::render::sprite::bank;
 
 /// Ground-level item visuals, drawn under creatures: auras and mines.
 pub fn under(cv: &mut Canvas, w: &World) {
@@ -26,7 +18,7 @@ pub fn under(cv: &mut Canvas, w: &World) {
     for (k, a) in w.gear.weapons.iter().enumerate() {
         let WeaponKind::Aura { radius, .. } = a.kind else { continue };
         let r = (radius * a.area * w.item_stats.get(super::Stat::Area)) as i32;
-        let (c1, c2) = tint(a.sprite);
+        let (c1, c2) = bank().get(a.sprite).tint();
         let t = w.gear.pulse * 2.0 + k as f32;
         cv.blend_ellipse(px, py + 2, r, r * 3 / 4, c1, 34 + (t.sin() * 10.0) as u8);
         let dots = (r / 3).max(8);
@@ -62,7 +54,7 @@ pub fn over(cv: &mut Canvas, w: &World) {
     }
 
     for b in &w.gear.beams {
-        let (c1, c2) = tint(b.sprite);
+        let (c1, c2) = bank().get(b.sprite).tint();
         let fade = b.life / BEAM_TIME;
         let half = ((b.width / 2.0 * fade).round() as i32).max(0);
         let (ex, ey) = (px + (b.dir.x * b.len) as i32, py + (b.dir.y * b.len) as i32);

@@ -16,6 +16,23 @@ pub struct CharacterDef {
     /// Idle animation. Optional; without it the hero stands on the first walk frame.
     #[serde(default)]
     pub idle: String,
+    /// Pose played once per shot of the hero's weapon. Optional.
+    #[serde(default)]
+    pub attack: String,
+    /// Pose held through a dash. Optional.
+    #[serde(default)]
+    pub dash: String,
+    /// Art row where the legs start. While running, the attack pose keeps the
+    /// stride's legs from this row down. 0 plays the whole pose.
+    #[serde(default)]
+    pub legs: i32,
+    /// Where the hero's shots leave the sprite (mouth, horn, claw), in pixels
+    /// from the sprite center with the hero facing right.
+    #[serde(default)]
+    pub muzzle: (f32, f32),
+    /// Hovers instead of walking: bobs over its shadow and kicks no dust.
+    #[serde(default)]
+    pub flies: bool,
     /// Meta currency cost to unlock. 0 means available from the start.
     #[serde(default)]
     pub unlock: u32,
@@ -33,6 +50,10 @@ pub struct CharacterDef {
     pub sprite_id: SpriteId,
     #[serde(skip)]
     pub idle_id: Option<SpriteId>,
+    #[serde(skip)]
+    pub attack_id: Option<SpriteId>,
+    #[serde(skip)]
+    pub dash_id: Option<SpriteId>,
 }
 
 #[derive(Deserialize, Debug)]

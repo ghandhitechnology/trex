@@ -9,13 +9,15 @@ use crate::engine::TICK_HZ;
 use crate::game::{Controls, DEATH_TIME, Game, Scene, clock_text};
 use crate::meta;
 use crate::meta::Toasts;
+use crate::meta::characters::CharacterDef;
 use crate::meta::hub::{Hub, Tab};
 use crate::meta::save::Save;
-use crate::render::canvas::Canvas;
+use crate::render::canvas::{Blit, Canvas};
 use crate::render::font;
 use crate::render::palette;
 use crate::render::png;
-use crate::render::sprite::bank;
+use crate::render::scene::over_legs;
+use crate::render::sprite::{SpriteId, bank};
 use crate::sim::Start;
 
 /// Upscale for written PNGs.
@@ -318,6 +320,61 @@ pub fn sheet(path: &Path) -> io::Result<()> {
     }
     png::write(path, &cv, PNG_SCALE)?;
     println!("wrote {} sprites to {}", sprites.len(), path.display());
+    Ok(())
+}
+
+/// Every hero's poses on one sheet, one hero per row: idle, walk, attack,
+/// the attack over each stride (what running while attacking shows), and
+/// dash. A cream dot marks the muzzle on attack frames.
+pub fn poses(path: &Path) -> io::Result<()> {
+    let bank = bank();
+    let heroes = &crate::content::get().characters;
+    let (cell, row_h, label_w) = (19, 24, 34);
+    let groups = |ch: &CharacterDef| {
+        let frames =
+            |id: Option<SpriteId>| id.map_or(Vec::new(), |id| bank.get(id).frames.iter().collect::<Vec<_>>());
+        let walk = frames(Some(ch.sprite_id));
+        let attack = frames(ch.attack_id);
+        let running: Vec<_> = if ch.legs > 0 {
+            walk.iter().flat_map(|s| attack.iter().map(|a| over_legs(a, s, ch.legs + 1))).collect()
+        } else {
+            Vec::new()
+        };
+        (frames(ch.idle_id), walk, attack, running, frames(ch.dash_id))
+    };
+    let widest = heroes
+        .iter()
+        .map(|ch| {
+            let (i, w, a, r, d) = groups(ch);
+            i.len() + w.len() + a.len() + r.len() + d.len() + 4
+        })
+        .max()
+        .unwrap_or(1) as i32;
+    let mut cv = Canvas::new(label_w + widest * cell, row_h * heroes.len() as i32 + 4);
+    cv.clear(palette::DUSK);
+    for (r, ch) in heroes.iter().enumerate() {
+        let y = 2 + r as i32 * row_h;
+        font::draw(&mut cv, 2, y + 7, &ch.id.to_uppercase(), palette::FOG);
+        let (idle, walk, attack, running, dash) = groups(ch);
+        let running: Vec<_> = running.iter().collect();
+        let mut x = label_w;
+        for (frames, muzzle) in [(idle, false), (walk, false), (attack, true), (running, true), (dash, false)]
+        {
+            for f in frames {
+                let (cx, cy) = (x + cell / 2, y + row_h / 2);
+                cv.fill_rect(x + 1, y + 1, cell - 2, row_h - 2, palette::NIGHT);
+                cv.blit_centered(f, cx, cy, Blit::default());
+                if muzzle {
+                    let (mx, my) = (ch.muzzle.0.round() as i32, ch.muzzle.1.round() as i32);
+                    cv.put(cx + mx, cy + my, palette::CREAM);
+                }
+                x += cell;
+            }
+            x += 4;
+        }
+    }
+    png::write(path, &cv, 6)?;
+    println!("wrote {} heroes to {}", heroes.len(), path.display());
     Ok(())
 }
 
