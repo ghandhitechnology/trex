@@ -1,6 +1,7 @@
 //! Item weapons: extra attacks that fire on their own and scale with the
-//! player's stats. Also owns the runtime objects items create: mines,
-//! meteors, beams, timed buffs, and the synergy banner.
+//! item stats (`World::item_stats`), which ignore the hero's base so every
+//! hero gets the same item. Also owns the runtime objects items create:
+//! mines, meteors, beams, timed buffs, and the synergy banner.
 //!
 //! Stat rules shared by every weapon: damage is a ratio of Damage, attack
 //! rate scales with FireRate, Shots adds to every count, radii scale with
