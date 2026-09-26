@@ -3,6 +3,8 @@
 use std::io::{self, Write};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::mpsc::{self, Receiver, RecvTimeoutError};
+use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use crossterm::event::{self, Event};
@@ -93,12 +95,45 @@ pub fn run() -> io::Result<()> {
     let (medium, forced) = pick_medium();
     let mut presenter = Presenter::new(medium, forced, term::in_tmux());
     let session = Session::enter()?;
+    // Restoring the terminal also deletes this image.
     session.track_image(presenter.id, presenter.tmux());
 
-    let mut layout = Layout::new(term::pane_size()?);
-    let mut canvas = Canvas::new(layout.lw, layout.lh);
+    let layout = Layout::new(term::pane_size()?);
     let mut game = Game::new(save, save_path, seed, (layout.lw, layout.lh), true);
+    let result = play(&mut game, &mut presenter, layout, &stop);
+    // Ctrl-C, a signal, or a dead terminal still banks the run in progress.
+    game.quit();
+    drop(session);
+    if std::env::var_os("TREX_DEBUG").is_some() {
+        eprintln!("trex: graphics medium {:?}, image id {}", presenter.medium, presenter.id);
+    }
+    result
+}
+
+/// Terminal events, read on their own thread and stamped on arrival.
+///
+/// crossterm's reader spins forever once the terminal hangs up (a closed pane
+/// reads as endless EOF), so it must never block the game loop. The loop
+/// notices the hangup through failed writes or SIGHUP and exits; the stuck
+/// thread dies with the process.
+fn spawn_input() -> Receiver<(Event, Instant)> {
+    let (tx, rx) = mpsc::channel();
+    thread::spawn(move || {
+        while let Ok(ev) = event::read() {
+            if tx.send((ev, Instant::now())).is_err() {
+                break;
+            }
+        }
+    });
+    rx
+}
+
+/// The fixed-step loop, until the player quits, Ctrl-C, or a signal.
+fn play(game: &mut Game, presenter: &mut Presenter, mut layout: Layout, stop: &AtomicBool) -> io::Result<()> {
+    let mut canvas = Canvas::new(layout.lw, layout.lh);
     let mut input = Input::default();
+    let events = spawn_input();
+    let mut woke = None;
     let mut stdout = io::stdout();
     let mut out = Vec::with_capacity(1 << 16);
     kitty::placeholders(&mut out, presenter.id, layout.cols, layout.rows);
@@ -108,12 +143,11 @@ pub fn run() -> io::Result<()> {
     let mut last_frame = Instant::now() - Duration::from_secs(1);
     let mut dirty = true;
 
-    'main: while !stop.load(Ordering::Relaxed) {
-        let now = Instant::now();
+    while !stop.load(Ordering::Relaxed) {
         let mut resized = false;
-        while event::poll(Duration::ZERO)? {
-            match event::read()? {
-                Event::Key(k) => input.key(k, now),
+        for (ev, at) in woke.take().into_iter().chain(events.try_iter()) {
+            match ev {
+                Event::Key(k) => input.key(k, at),
                 Event::FocusLost => {
                     focused = false;
                     game.focus_lost();
@@ -124,8 +158,9 @@ pub fn run() -> io::Result<()> {
                 _ => {}
             }
         }
+        let now = Instant::now();
         if input.force_quit {
-            break;
+            return Ok(());
         }
         if resized {
             layout = Layout::new(term::pane_size()?);
@@ -140,7 +175,7 @@ pub fn run() -> io::Result<()> {
         while next_tick <= now && steps < MAX_CATCHUP {
             let c = input.controls(now);
             if game.update(&c) == Signal::Quit {
-                break 'main;
+                return Ok(());
             }
             next_tick += Duration::from_secs_f32(DT);
             steps += 1;
@@ -150,7 +185,7 @@ pub fn run() -> io::Result<()> {
         }
 
         if (steps > 0 || dirty)
-            && now.duration_since(last_frame) >= frame_interval(&game, focused, presenter.medium)
+            && now.duration_since(last_frame) >= frame_interval(game, focused, presenter.medium)
         {
             game.render(&mut canvas);
             presenter.present(&mut out, &canvas, layout.scale(presenter.medium), layout.cols, layout.rows)?;
@@ -163,15 +198,12 @@ pub fn run() -> io::Result<()> {
             out.clear();
         }
 
-        event::poll(next_tick.saturating_duration_since(Instant::now()))?;
-    }
-
-    presenter.cleanup(&mut out);
-    stdout.write_all(&out)?;
-    stdout.flush()?;
-    drop(session);
-    if std::env::var_os("TREX_DEBUG").is_some() {
-        eprintln!("trex: graphics medium {:?}, image id {}", presenter.medium, presenter.id);
+        match events.recv_timeout(next_tick.saturating_duration_since(Instant::now())) {
+            Ok(ev) => woke = Some(ev),
+            Err(RecvTimeoutError::Timeout) => {}
+            // The reader failed: the terminal is gone.
+            Err(RecvTimeoutError::Disconnected) => return Ok(()),
+        }
     }
     Ok(())
 }

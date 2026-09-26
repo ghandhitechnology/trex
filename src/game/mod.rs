@@ -328,6 +328,11 @@ impl Game {
         }
     }
 
+    /// Bank a run in progress before the program exits.
+    pub fn quit(&mut self) {
+        self.finish_run();
+    }
+
     /// Record the current run in the save (once) and write it to disk.
     fn finish_run(&mut self) -> Summary {
         let content = content::get();

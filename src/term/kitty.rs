@@ -578,13 +578,15 @@ impl Presenter {
         direct_chunks(out, &format!("{base},t=d,o=z"), data.as_bytes(), self.tmux);
         Ok(())
     }
+}
 
-    /// Delete the image and any frames the terminal did not pick up.
-    pub fn cleanup(&mut self, out: &mut Vec<u8>) {
+/// Frames the terminal never picked up would outlive us (shared memory
+/// until reboot), so they go on every exit path, including errors and panics.
+impl Drop for Presenter {
+    fn drop(&mut self) {
         if self.medium != Medium::Direct {
             self.clear_slots();
         }
-        delete(out, self.id, self.tmux);
     }
 }
 
@@ -603,6 +605,9 @@ fn write_shm(name: &CString, data: &[u8]) -> io::Result<()> {
     // SAFETY: plain POSIX calls on a descriptor we own; the mapping is exactly
     // `data.len()` bytes and unmapped before return.
     unsafe {
+        // The slot is free, so an object by this name is left over from a
+        // crashed process that had our pid.
+        libc::shm_unlink(name.as_ptr());
         let fd =
             libc::shm_open(name.as_ptr(), libc::O_CREAT | libc::O_EXCL | libc::O_RDWR, 0o600 as libc::c_uint);
         if fd < 0 {
