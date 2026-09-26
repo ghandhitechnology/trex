@@ -8,7 +8,7 @@
         idle: "rex_idle",
         weapon: (shot: "bolt"),
         base: {
-            MaxHp: 6.0,
+            MaxHp: 8.0,
             Speed: 68.0,
             Damage: 6.0,
             FireRate: 2.0,

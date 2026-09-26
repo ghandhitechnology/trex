@@ -356,7 +356,9 @@ pub fn update(w: &mut World, dt: f32) {
         let p = d.pending.swap_remove(i);
         let uid = w.next_uid();
         let phase = w.rng.f32();
-        let mut e = Enemy::new(uid, p.kind, p.pos, hp_mul * p.hp_scale, speed_mul, phase);
+        // Boss HP is already set per slot in the order, so it scales gently.
+        let hp = if enemies[p.kind].boss().is_some() { hp_mul.sqrt() } else { hp_mul };
+        let mut e = Enemy::new(uid, p.kind, p.pos, hp * p.hp_scale, speed_mul, phase);
         if let Some(el) = p.elite {
             e.make_elite(el, waves.elites.hp);
         }

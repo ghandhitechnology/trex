@@ -163,9 +163,11 @@ pub fn run(w: &mut World, action: &Action, ev: &GameEvent, owner: Owner) {
         }
         Action::Shockwave { radius, force } => {
             let r = radius * area;
+            let enemies = &crate::content::get().enemies;
             for i in w.enemies_in(ev.pos, r) {
                 let e = &mut w.enemies[i];
-                e.push += (e.pos - ev.pos).norm() * force;
+                // Heavy enemies and bosses resist shoves and pulls.
+                e.push += (e.pos - ev.pos).norm() * force / enemies[e.kind].mass.max(1.0);
             }
             let color = if force < 0.0 { palette::GRAPE } else { palette::ICE };
             w.fx.ring(ev.pos, r, color);
