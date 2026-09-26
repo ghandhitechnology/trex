@@ -94,7 +94,7 @@
         (id: "river_king", name: "River King", goal: SurviveAs("spino", 300.0), reward: Bones(60)),
         (id: "spiked_wall", name: "Spiked Wall", goal: SurviveAs("stego", 300.0), reward: Bones(60)),
         (id: "thick_skull", name: "Thick Skull", goal: SurviveAs("pachy", 300.0), reward: Bones(60)),
-        (id: "extinction", name: "Extinction", goal: TotalKills(20000), reward: Bones(300)),
+        (id: "extinction", name: "Mass Extinction", goal: TotalKills(20000), reward: Bones(300)),
         (id: "endless", name: "Endless", goal: Level(30), reward: Bones(250)),
         (id: "apex", name: "Apex", goal: Survive(900.0), reward: Bones(400)),
     ],
