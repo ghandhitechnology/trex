@@ -183,8 +183,11 @@ Beams and auras take their colors from their sprite: the most used color is
 the body, the second the highlight (see the swatches in `src/items/sprites.rs`).
 
 Stats every weapon uses: Damage, FireRate (rate scales by FireRate over the
-character's base), Shots (+count, except auras), Area (radii), Duration (mine
-life), Crit. Guns also use every projectile stat. Weapon hits fire `Hit`,
+default 2.0), Shots (+count, except auras), Area (radii), Duration (mine
+life), Crit. Guns also use every projectile stat. Item weapons and item
+triggers read these stats with the stat defaults as their base instead of the
+hero's `base`, so an item behaves the same on every hero; only modifiers
+(items, upgrades, synergies, hero `stats`) change them. Weapon hits fire `Hit`,
 `Crit` and `Kill` like the main weapon. Each stack past the first adds +10%
 damage; stacks 2 and 4 add +1 count (auras grow 15% per stack instead).
 
@@ -271,7 +274,7 @@ Enemies with `hp` of 40 or more, and elites, show a health bar when damaged.
     idle: "rex_idle",                   // optional: idle frames, else the first walk frame
     unlock: 0,                          // optional: bones to unlock, 0 = free
     weapon: (shot: "bolt", pattern: Aimed),
-    base: { MaxHp: 6.0, FireRate: 2.0 }, // optional: overrides stat defaults
+    base: { MaxHp: 8.0, FireRate: 2.0 }, // optional: overrides stat defaults for the hero and its weapon
     stats: [],                          // optional passive modifiers
     triggers: [                         // optional passive triggers
         (on: Dash, action: Shockwave(radius: 26.0, force: 170.0)),
@@ -317,9 +320,9 @@ per minute.
 Stages change every `stage_length` seconds with a banner. `biome` (optional,
 default `Tarpit`) picks the arena look: `Tarpit`, `Fernbog` or `Ashfall`.
 `ground` (optional) is three palette characters (dark, mid, light) the floor
-is recolored to on top of the biome. Both fade in over 3 seconds. After the last stage the list loops from
-`loop_from`, and HP, credits, and elite odds keep growing, so endless runs
-keep escalating.
+is recolored to on top of the biome. Both fade in over 3 seconds. After the
+last stage the list loops from `loop_from`, and HP, credits, and elite odds
+keep growing, so endless runs keep escalating.
 
 Elites roll per bought spawn (not events or summons) once the run passes
 `from`: `chance` plus `per_min` each minute, capped at `max`. An elite has `hp`
@@ -330,7 +333,8 @@ death), Splitting (lime, splits in two).
 
 Bosses arrive at `first` and then every `every` seconds, cycling through
 `order`, with a banner 2.5 seconds ahead. While one is alive, regular spawn
-credits run at `calm` times the normal rate.
+credits run at `calm` times the normal rate. Boss HP grows with the square
+root of the `hp_growth` multiplier, since each boss already sets its own HP.
 
 `TREX_WARP=SECS` starts the director that far into a run (stage, bosses, HP,
 credits) for checking late-game content.
