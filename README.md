@@ -49,6 +49,7 @@ Needs Rust 1.85 or newer. The save lives in
 
 ```sh
 trex --dump-frames DIR [--seconds N] [--seed S] [--every SECS] [--hero ID] [--save fresh|unlocked|maxed]
+trex --clip DIR --from SECS --seconds N [--size WxH] [--seed S] [--hero ID] [--items ID,ID] [--levelup SECS] [--show run|title|paused|hub_*]
 trex --sim --runs 30 [--hero ID] [--save fresh|unlocked|maxed] [--items]
 trex --meta --runs 200
 trex --stress [--minutes 60]
@@ -58,6 +59,8 @@ trex --sheet sheet.png
 - `--dump-frames` plays a bot run and writes 4x PNGs of the title, every hub
   tab, gameplay, level-ups, pause, and death, so the art can be checked
   without a terminal.
+- `--clip` fast-forwards an unkillable bot run and writes every frame at 1x
+  (the trailer's footage, `trailer/tools/capture.sh`).
 - `--sim` and `--items` print survival per hero and per item from bot runs.
   `--meta` shows when unlocks and feats land over many runs. `--stress`
   prints entity counts and frame cost per minute.

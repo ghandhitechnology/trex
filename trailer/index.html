@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: #0f0b18; }
+      #root { width: 100%; height: 100%; position: relative; background: #0f0b18; }
+      #screen { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="75" data-fps="60" data-width="1920" data-height="1080">
+      <canvas id="screen" data-layout-allow-overflow width="1920" height="1080"></canvas>
+      <audio id="music" src="assets/audio/trailer.wav" data-start="0" data-duration="75" data-track-index="1"></audio>
+    </div>
+    <script src="engine/font-small.js"></script>
+    <script src="engine/px.js"></script>
+    <!-- Scenes, in story order. Each registers itself with PX.scene(). -->
+    <script src="engine/tmux.js"></script>
+    <script src="scenes/00-coldopen.js"></script>
+    <script src="scenes/12-track.js"></script>
+    <script src="scenes/10-gameplay.js"></script>
+    <script src="scenes/11-climax.js"></script>
+    <script src="scenes/20-roster.js"></script>
+    <script src="scenes/21-bosses.js"></script>
+    <script src="scenes/30-outro.js"></script>
+    <script src="scenes/31-outro-hub.js"></script>
+    <script src="scenes/90-overlay.js"></script>
+    <script>
+      PX.boot(document.getElementById('screen')).then(() => {
+        const tl = gsap.timeline({ paused: true });
+        const clock = { t: 0 };
+        tl.to(clock, { t: PX.DURATION, duration: PX.DURATION, ease: 'none', onUpdate: () => PX.render(clock.t) }, 0);
+        PX.render(0);
+        window.__timelines['main'] = tl;
+        if (window.__hfForceTimelineRebind) window.__hfForceTimelineRebind();
+      });
+    </script>
+  </body>
+</html>
