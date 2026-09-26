@@ -1,0 +1,19 @@
+// Wave director. Format: content/README.md
+(
+    credits: 0.9,
+    credits_per_min: 1.3,
+    hp_growth: 0.25,
+    speed_per_min: 0.06,
+    max_alive: 320,
+    phases: [
+        (at: 0.0, pool: [("grub", 1.0)]),
+        (at: 40.0, pool: [("grub", 3.0), ("wisp", 2.0)]),
+        (at: 100.0, pool: [("grub", 3.0), ("wisp", 3.0), ("brute", 1.0)]),
+        (at: 200.0, pool: [("grub", 2.0), ("wisp", 3.0), ("brute", 2.0)]),
+    ],
+    events: [
+        (at: 60.0, every: 120.0, enemy: "wisp", count: 14, shape: Ring),
+        (at: 150.0, every: 90.0, enemy: "grub", count: 18, shape: Cluster),
+        (at: 180.0, every: 150.0, enemy: "brute", count: 3, shape: Cluster),
+    ],
+)

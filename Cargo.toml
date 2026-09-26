@@ -1,0 +1,23 @@
+[package]
+name = "trex"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+crossterm = { version = "0.29", default-features = false, features = ["events"] }
+serde = { version = "1", features = ["derive"] }
+ron = "0.12"
+png = "0.18"
+dirs = "6"
+base64 = "0.22"
+libc = "0.2"
+signal-hook = "0.3"
+flate2 = "1"
+
+[profile.release]
+opt-level = 3
+debug = false
+panic = "unwind"
+
+[profile.dev]
+opt-level = 1

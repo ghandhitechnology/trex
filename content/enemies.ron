@@ -1,0 +1,35 @@
+// Enemy types. Format: content/README.md
+[
+    (
+        id: "grub",
+        sprite: "grub",
+        hp: 6.0,
+        speed: 24.0,
+        radius: 6.0,
+        xp: 1,
+        cost: 1.0,
+    ),
+    (
+        id: "wisp",
+        sprite: "wisp",
+        hp: 4.0,
+        speed: 42.0,
+        radius: 5.0,
+        xp: 1,
+        mass: 0.6,
+        cost: 1.2,
+        behavior: Weave(amp: 0.8, freq: 3.0),
+    ),
+    (
+        id: "brute",
+        sprite: "brute",
+        hp: 50.0,
+        speed: 16.0,
+        damage: 2,
+        radius: 8.0,
+        xp: 6,
+        mass: 4.0,
+        cost: 6.0,
+        behavior: Charge(range: 80.0, windup: 0.6, speed: 150.0, time: 0.45, cooldown: 1.6),
+    ),
+]

@@ -1,0 +1,19 @@
+// Playable characters. Format: content/README.md
+[
+    (
+        id: "rex",
+        name: "Rex",
+        desc: "Spits embers. Dashes knock enemies back.",
+        sprite: "rex",
+        weapon: (shot: "bolt"),
+        base: {
+            MaxHp: 6.0,
+            Speed: 68.0,
+            Damage: 6.0,
+            FireRate: 2.0,
+        },
+        triggers: [
+            (on: Dash, action: Shockwave(radius: 26.0, force: 170.0)),
+        ],
+    ),
+]

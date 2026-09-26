@@ -1,0 +1,87 @@
+// Items offered on level-up. Format: content/README.md
+[
+    (
+        id: "hot_lead",
+        name: "Hot Lead",
+        desc: "Hits set enemies on fire.",
+        sprite: "hot_lead",
+        triggers: [
+            (on: Hit, action: Burn(dps: 0.4, secs: 2.0)),
+        ],
+    ),
+    (
+        id: "twin_barrel",
+        name: "Twin Barrel",
+        desc: "+1 shot. -15% damage.",
+        sprite: "twin_barrel",
+        rarity: Rare,
+        max_stacks: 4,
+        stats: [(stat: Shots, add: 1), (stat: Damage, mul: -0.15)],
+    ),
+    (
+        id: "rubber_ball",
+        name: "Rubber Ball",
+        desc: "Shots bounce to another enemy.",
+        sprite: "rubber_ball",
+        stats: [(stat: Bounce, add: 1)],
+    ),
+    (
+        id: "drill_bit",
+        name: "Drill Bit",
+        desc: "Shots pierce one more enemy.",
+        sprite: "drill_bit",
+        stats: [(stat: Pierce, add: 1), (stat: ShotSpeed, mul: 0.1)],
+    ),
+    (
+        id: "powder_keg",
+        name: "Powder Keg",
+        desc: "Kills may explode.",
+        sprite: "powder_keg",
+        rarity: Rare,
+        triggers: [
+            (on: Kill, chance: 0.3, action: Explode(radius: 18.0, damage: 0.8)),
+        ],
+    ),
+    (
+        id: "spark_plug",
+        name: "Spark Plug",
+        desc: "Dashing fires a ring of sparks.",
+        sprite: "spark_plug",
+        stats: [(stat: DashCooldown, mul: -0.1)],
+        triggers: [
+            (on: Dash, action: Nova(count: 10, damage: 0.7)),
+        ],
+    ),
+    (
+        id: "black_coffee",
+        name: "Black Coffee",
+        desc: "+20% fire rate.",
+        sprite: "black_coffee",
+        stats: [(stat: FireRate, mul: 0.2)],
+    ),
+    (
+        id: "magnet",
+        name: "Magnet",
+        desc: "Wider gem pull. +10% XP.",
+        sprite: "magnet",
+        max_stacks: 3,
+        stats: [(stat: Pickup, mul: 0.5), (stat: XpGain, mul: 0.1)],
+    ),
+    (
+        id: "heart_jar",
+        name: "Heart Jar",
+        desc: "+1 heart.",
+        sprite: "heart_jar",
+        stats: [(stat: MaxHp, add: 2.0)],
+    ),
+    (
+        id: "static_coil",
+        name: "Static Coil",
+        desc: "Hits may arc lightning.",
+        sprite: "static_coil",
+        rarity: Rare,
+        triggers: [
+            (on: Hit, chance: 0.2, action: Chain(jumps: 3, range: 60.0, damage: 0.6)),
+        ],
+    ),
+]

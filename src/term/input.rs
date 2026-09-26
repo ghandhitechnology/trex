@@ -1,0 +1,228 @@
+//! Keyboard events to game controls.
+//!
+//! Most terminals (and tmux) never report key release, only a press followed by
+//! OS key repeats after an initial delay. A direction therefore counts as held
+//! until a short window after its last event: long enough after the first press
+//! to bridge the OS repeat delay, short after a repeat. The delay and interval
+//! are learned from the repeat stream. If the terminal sends kitty-protocol
+//! release events, holds become exact.
+
+use std::time::{Duration, Instant};
+
+use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
+
+use crate::game::Controls;
+
+const UP: usize = 0;
+const DOWN: usize = 1;
+const LEFT: usize = 2;
+const RIGHT: usize = 3;
+
+/// Hold window after a repeat event.
+const REPEAT_WINDOW: Duration = Duration::from_millis(150);
+/// Extra margin on top of the learned initial repeat delay.
+const DELAY_MARGIN: Duration = Duration::from_millis(90);
+/// Gaps shorter than this are treated as an OS repeat stream.
+const REPEAT_MAX_GAP: Duration = Duration::from_millis(120);
+
+#[derive(Clone, Copy, Default)]
+struct Hold {
+    last: Option<Instant>,
+    repeats: u32,
+    first_gap: Duration,
+}
+
+pub struct Input {
+    holds: [Hold; 4],
+    /// Kitty keyboard protocol detected: holds end on release events.
+    precise: bool,
+    delay: Duration,
+    interval: Duration,
+    edges: Controls,
+    /// Ctrl-C: leave immediately.
+    pub force_quit: bool,
+}
+
+impl Default for Input {
+    fn default() -> Self {
+        Input {
+            holds: [Hold::default(); 4],
+            precise: false,
+            delay: Duration::from_millis(450),
+            interval: Duration::from_millis(40),
+            edges: Controls::default(),
+            force_quit: false,
+        }
+    }
+}
+
+fn direction(code: KeyCode) -> Option<usize> {
+    match code {
+        KeyCode::Char(c) => match c.to_ascii_lowercase() {
+            'w' => Some(UP),
+            's' => Some(DOWN),
+            'a' => Some(LEFT),
+            'd' => Some(RIGHT),
+            _ => None,
+        },
+        KeyCode::Up => Some(UP),
+        KeyCode::Down => Some(DOWN),
+        KeyCode::Left => Some(LEFT),
+        KeyCode::Right => Some(RIGHT),
+        _ => None,
+    }
+}
+
+fn opposite(d: usize) -> usize {
+    d ^ 1
+}
+
+fn ema(old: Duration, new: Duration) -> Duration {
+    old.mul_f32(0.6) + new.mul_f32(0.4)
+}
+
+impl Input {
+    pub fn key(&mut self, k: KeyEvent, now: Instant) {
+        let dir = direction(k.code);
+        match k.kind {
+            KeyEventKind::Release => {
+                self.precise = true;
+                if let Some(d) = dir {
+                    self.holds[d] = Hold::default();
+                }
+                return;
+            }
+            KeyEventKind::Repeat => {
+                self.precise = true;
+                if let Some(d) = dir {
+                    self.holds[d].last = Some(now);
+                }
+                return;
+            }
+            KeyEventKind::Press => {}
+        }
+
+        if k.modifiers.contains(KeyModifiers::CONTROL) && matches!(k.code, KeyCode::Char('c' | 'C')) {
+            self.force_quit = true;
+            return;
+        }
+        if let Some(d) = dir {
+            self.press_direction(d, now);
+            return;
+        }
+        let e = &mut self.edges;
+        match k.code {
+            KeyCode::Char(' ') | KeyCode::Enter => {
+                e.dash = true;
+                e.confirm = true;
+            }
+            KeyCode::Esc => e.pause = true,
+            KeyCode::Char(c) => match c.to_ascii_lowercase() {
+                'p' => e.pause = true,
+                'q' => e.quit = true,
+                'y' => e.yes = true,
+                'n' => e.no = true,
+                '1'..='9' => e.pick = c.to_digit(10).map(|n| n as u8),
+                _ => {}
+            },
+            _ => {}
+        }
+    }
+
+    fn press_direction(&mut self, d: usize, now: Instant) {
+        let fresh = !self.held(d, now);
+        if fresh {
+            self.holds[d] = Hold { last: Some(now), repeats: 0, first_gap: Duration::ZERO };
+            self.holds[opposite(d)] = Hold::default();
+            match d {
+                LEFT => self.edges.left = true,
+                RIGHT => self.edges.right = true,
+                _ => {}
+            }
+            return;
+        }
+        let h = &mut self.holds[d];
+        let gap = h.last.map_or(Duration::ZERO, |t| now.duration_since(t));
+        h.repeats += 1;
+        h.last = Some(now);
+        match h.repeats {
+            1 => h.first_gap = gap,
+            // The second repeat confirms a real repeat stream, so the first gap
+            // was the OS initial delay (not a quick double tap).
+            2 if gap < REPEAT_MAX_GAP => {
+                self.delay = ema(self.delay, h.first_gap)
+                    .clamp(Duration::from_millis(150), Duration::from_millis(900));
+                self.interval = ema(self.interval, gap);
+            }
+            _ if gap < REPEAT_MAX_GAP => self.interval = ema(self.interval, gap),
+            _ => {}
+        }
+    }
+
+    fn held(&self, d: usize, now: Instant) -> bool {
+        let h = &self.holds[d];
+        let Some(last) = h.last else { return false };
+        if self.precise {
+            return true;
+        }
+        let window =
+            if h.repeats == 0 { self.delay + DELAY_MARGIN } else { REPEAT_WINDOW.max(self.interval * 3) };
+        now.duration_since(last) < window
+    }
+
+    /// Drop all holds (focus lost: releases may never arrive).
+    pub fn release_all(&mut self) {
+        self.holds = [Hold::default(); 4];
+    }
+
+    /// Controls for the next tick. Button edges are handed out once.
+    pub fn controls(&mut self, now: Instant) -> Controls {
+        let axis = |neg: bool, pos: bool| f32::from(u8::from(pos)) - f32::from(u8::from(neg));
+        let mut c = std::mem::take(&mut self.edges);
+        c.move_x = axis(self.held(LEFT, now), self.held(RIGHT, now));
+        c.move_y = axis(self.held(UP, now), self.held(DOWN, now));
+        c
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crossterm::event::KeyEvent;
+
+    fn press(i: &mut Input, t: Instant) {
+        i.key(KeyEvent::new(KeyCode::Char('d'), KeyModifiers::NONE), t);
+    }
+
+    #[test]
+    fn repeat_stream_holds_then_releases() {
+        let t0 = Instant::now();
+        let ms = |n: u64| t0 + Duration::from_millis(n);
+        let mut i = Input::default();
+        press(&mut i, t0);
+        // Bridges the OS initial repeat delay.
+        assert_eq!(i.controls(ms(400)).move_x, 1.0);
+        let mut t = 450;
+        while t <= 1000 {
+            press(&mut i, ms(t));
+            t += 30;
+        }
+        assert_eq!(i.controls(ms(1000)).move_x, 1.0);
+        // Released shortly after the last repeat, not after the long initial window.
+        assert_eq!(i.controls(ms(1100)).move_x, 1.0);
+        assert_eq!(i.controls(ms(1150)).move_x, 0.0);
+    }
+
+    #[test]
+    fn opposite_press_cancels_and_release_events_are_exact() {
+        let t0 = Instant::now();
+        let mut i = Input::default();
+        press(&mut i, t0);
+        i.key(KeyEvent::new(KeyCode::Char('a'), KeyModifiers::NONE), t0);
+        assert_eq!(i.controls(t0).move_x, -1.0);
+        let mut rel = KeyEvent::new(KeyCode::Char('a'), KeyModifiers::NONE);
+        rel.kind = KeyEventKind::Release;
+        i.key(rel, t0);
+        assert_eq!(i.controls(t0).move_x, 0.0);
+    }
+}
