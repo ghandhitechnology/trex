@@ -375,7 +375,7 @@ pub fn hit(
     depth: u8,
     weapon: Option<usize>,
 ) {
-    if w.enemies[i].dead {
+    if !w.enemies[i].hittable() {
         return;
     }
     let crit = weapon.is_some() && w.rng.chance(w.stats.get(Stat::Crit));
@@ -557,7 +557,7 @@ fn beam(w: &mut World, k: usize, length: f32, width: f32) -> bool {
                 let d = e.pos - pos;
                 let along = d.x * dir.x + d.y * dir.y;
                 let across = (d.x * dir.y - d.y * dir.x).abs();
-                !e.dead && along > -4.0 && along < len && across < half + enemies[e.kind].radius
+                e.hittable() && along > -4.0 && along < len && across < half + enemies[e.kind].radius
             })
             .collect();
         for i in targets {
@@ -657,7 +657,7 @@ pub fn rain(
 ) -> bool {
     let pos = w.player.pos;
     let mut near: Vec<usize> = (0..w.enemies.len())
-        .filter(|&i| !w.enemies[i].dead && w.enemies[i].pos.dist_sq(pos) < METEOR_REACH * METEOR_REACH)
+        .filter(|&i| w.enemies[i].hittable() && w.enemies[i].pos.dist_sq(pos) < METEOR_REACH * METEOR_REACH)
         .collect();
     if near.is_empty() {
         return false;

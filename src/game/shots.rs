@@ -55,7 +55,7 @@ pub fn update(w: &mut World, dt: f32) {
         w.grid.query(s.pos, s.radius + 12.0, |i| near.push(i));
         for &i in &near {
             let e = &w.enemies[i];
-            if e.dead || s.has_hit(e.uid) {
+            if !e.hittable() || s.has_hit(e.uid) {
                 continue;
             }
             let r = s.radius + enemies[e.kind].radius;

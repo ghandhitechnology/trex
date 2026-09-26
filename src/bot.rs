@@ -51,10 +51,18 @@ impl Bot {
                 }
             }
         }
+        // Sidestep shots on course to hit within half a second.
         for s in w.shots.iter().filter(|s| s.hostile) {
             let d = p - s.pos;
-            if d.len() < 30.0 {
-                force += d.norm() * 1.5;
+            let along = d.x * s.vel.x + d.y * s.vel.y;
+            let speed_sq = s.vel.len_sq().max(1.0);
+            let t = along / speed_sq;
+            if (0.0..0.5).contains(&t) {
+                let miss = d - s.vel * t;
+                if miss.len() < 10.0 {
+                    let side = if miss.len_sq() > 0.01 { miss.norm() } else { s.vel.norm().perp() };
+                    force += side * 2.5 * (1.0 - t * 1.5);
+                }
             }
         }
         if let Some(gem) = w.gems.iter().min_by(|a, b| a.pos.dist_sq(p).total_cmp(&b.pos.dist_sq(p))) {

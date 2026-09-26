@@ -12,8 +12,8 @@ use crate::items::weapons::{self, Gear, ShotTag};
 use crate::items::{Build, On, Source, Stat, Stats};
 use crate::render::camera::Camera;
 use crate::render::fx::Fx;
-use crate::render::palette::{self, Color};
-use crate::render::sprite::{SpriteId, bank};
+use crate::render::palette;
+use crate::render::sprite::SpriteId;
 
 /// Arena size in world pixels. The view is smaller and follows the player.
 pub const ARENA: Rect = Rect::new(0.0, 0.0, 512.0, 320.0);
@@ -248,7 +248,7 @@ impl World {
         self.grid.query(pos, range, |i| {
             let Some(e) = self.enemies.get(i) else { return };
             let d = e.pos.dist_sq(pos);
-            if !e.dead && d < best_d && ok(e) {
+            if e.hittable() && d < best_d && ok(e) {
                 best_d = d;
                 best = Some(i);
             }
@@ -263,7 +263,7 @@ impl World {
         self.grid.query(pos, radius + 12.0, |i| {
             let Some(e) = self.enemies.get(i) else { return };
             let r = radius + enemies[e.kind].radius;
-            if !e.dead && e.pos.dist_sq(pos) < r * r {
+            if e.hittable() && e.pos.dist_sq(pos) < r * r {
                 out.push(i);
             }
         });
@@ -274,10 +274,10 @@ impl World {
     pub fn damage_enemy(&mut self, i: usize, hit: Hit) -> bool {
         let def = &content::get().enemies[self.enemies[i].kind];
         let e = &mut self.enemies[i];
-        if e.dead {
+        if !e.hittable() {
             return false;
         }
-        e.hp -= hit.damage;
+        e.hp -= enemies::absorb(e, hit.damage);
         e.flash = 0.09;
         e.push += hit.knock / def.mass;
         let pos = e.pos;
@@ -297,20 +297,7 @@ impl World {
             self.enemies[i].dead = true;
             self.kills += 1;
             self.events.push_back(GameEvent { on: On::Kill, pos, target: Some(i), depth, source });
-            self.gems.push(Gem {
-                pos,
-                vel: Vec2::from_angle(self.rng.angle()) * 30.0,
-                value: def.xp,
-                pull: false,
-                age: 0.0,
-                dead: false,
-            });
-            if self.fx.enabled {
-                let colors: Vec<Color> =
-                    bank().get(def.sprite_id).colors.iter().take(4).map(|&c| palette::color(c)).collect();
-                self.fx.debris(pos, &colors, 10);
-                self.fx.burst(pos, &[palette::BONE, palette::CREAM], 5, 60.0);
-            }
+            enemies::died(self, i);
         }
         killed
     }

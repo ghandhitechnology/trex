@@ -224,6 +224,12 @@ Upgrade fields, all optional except `weapon`: `sprite` (new look), `count`,
     mass: 4.0,         // optional, knockback resistance, default 1
     cost: 6.0,         // optional, director credits, default 1
     behavior: Charge(range: 80.0, windup: 0.6, speed: 150.0, time: 0.45, cooldown: 1.6),
+    shot: Some("spit"),                               // optional, projectile sprite, default "spit"
+    minion: Some("mite"),                             // optional, for Summon and boss broods
+    split: Some((enemy: "slimelet", count: 2)),       // optional, spawns on death
+    shield: 30.0,      // optional, shield HP; soaks damage, regrows after 2.5s untouched
+    death: Smoke,      // optional, death animation, default Pop
+    name: "BONE COLOSSUS", // optional, shown on the boss bar
 )
 ```
 
@@ -232,9 +238,26 @@ Upgrade fields, all optional except `weapon`: `sprite` (new look), `count`,
 | `Chase` (default) | walks at the player |
 | `Weave(amp, freq)` | chases while swaying side to side |
 | `Charge(range, windup, speed, time, cooldown)` | closes in, flashes, dashes in a line |
-| `Shoot(range, cooldown, speed, sprite)` | keeps distance and fires `sprite` projectiles |
+| `Shoot(range, cooldown, speed, pattern, windup)` | keeps distance, flashes for `windup`, fires `pattern` |
+| `Orbit(radius, spin, dive)` | circles the player, dives through every `dive` seconds |
+| `Burrow(under, up, shots)` | travels underground (untouchable), surfaces near the player with a ring of `shots` |
+| `Blink(range, cooldown, windup, shots)` | vanishes, reappears `range` from the player, fires a fan |
+| `Kamikaze(range, fuse, radius, damage)` | rushes in, lights a fuse, explodes; hurts enemies too |
+| `Slam(range, windup, radius, damage, cooldown)` | winds up, pounds the ground around itself |
+| `Summon(count, cooldown, range)` | keeps distance, calls in `count` of its `minion` |
+| `Boss(kind)` | scripted boss: `Mire`, `Colossus`, `Wraith`, `Sandmaw`, `Eye` |
 
-Enemies defined with `hp` of 40 or more show a health bar when damaged.
+`pattern` is `Single` (default), `Spread(count, angle)` (degrees),
+`Ring(count)`, or `Burst(count, gap)` (aimed shots `gap` seconds apart).
+Every windup is telegraphed: the enemy flashes red and dangerous areas are
+marked on the ground.
+
+`death` is `Pop`, `Splat`, `Ash`, `Shatter`, `Smoke`, `Zap`, `Boom`, `Fade`,
+or `Spores`. Particles take the sprite's colors.
+
+Bosses rage at 55% and 25% HP: a roar, a ring of shots, a harder move list,
+and shorter rests. A boss kill spills its XP as ten gems and heals 2 hearts.
+Enemies with `hp` of 40 or more, and elites, show a health bar when damaged.
 
 ## characters.ron
 
@@ -266,19 +289,45 @@ Enemies defined with `hp` of 40 or more show a health bar when damaged.
     hp_growth: 0.25,       // enemy HP x1.25 per minute, compounding
     speed_per_min: 0.06,   // optional, enemy speed +6% per minute, max +50%
     max_alive: 320,        // cap on live + pending enemies
-    phases: [              // the latest phase whose `at` has passed is active
-        (at: 0.0, pool: [("grub", 1.0)]),         // (enemy id, weight)
+    stage_length: 150.0,   // seconds per stage
+    loop_from: 1,          // optional, stage to loop back to after the last
+    stages: [
+        (name: "TAR PITS", pool: [("grub", 4.0), ("wisp", 2.0)]),   // (enemy id, weight)
+        (name: "FERN HOLLOW", ground: Some("ktf"), pool: [("frog", 2.0)]),
     ],
     events: [              // optional scripted groups
         (at: 60.0, every: 120.0, enemy: "wisp", count: 14, shape: Ring),
     ],
+    elites: (from: 120.0, chance: 0.02, per_min: 0.012, max: 0.2, hp: 3.0, cost: 3.0),
+    bosses: (first: 180.0, every: 180.0, order: ["mire_queen", "colossus"], calm: 0.3),
 )
 ```
 
-The director buys enemies from the active pool with its credits. Spawns land
-just off screen; ones that land on screen get a warning marker first. Event
-`shape` is `Ring` (circle around the player) or `Cluster` (one group off
-screen); `every` (optional) repeats the event, and counts grow 15% per minute.
+The director buys enemies from the current stage's pool with its credits.
+Spawns land just off screen; ones that land on screen get a warning marker
+first. Event `shape` is `Ring` (circle around the player) or `Cluster` (one
+group off screen); `every` (optional) repeats the event, and counts grow 15%
+per minute.
+
+Stages change every `stage_length` seconds with a banner. `ground` (optional)
+is three palette characters (dark, mid, light) the floor is recolored to; the
+shift fades in over 3 seconds. After the last stage the list loops from
+`loop_from`, and HP, credits, and elite odds keep growing, so endless runs
+keep escalating.
+
+Elites roll per bought spawn (not events or summons) once the run passes
+`from`: `chance` plus `per_min` each minute, capped at `max`. An elite has `hp`
+times the health, costs `cost` times the credits, drops triple XP, and carries
+one modifier shown as a colored rim: Swift (cyan, faster), Tough (gold, more
+HP), Shielded (ice, shield bubble), Volatile (ember, bursts into shots on
+death), Splitting (lime, splits in two).
+
+Bosses arrive at `first` and then every `every` seconds, cycling through
+`order`, with a banner 2.5 seconds ahead. While one is alive, regular spawn
+credits run at `calm` times the normal rate.
+
+`TREX_WARP=SECS` starts the director that far into a run (stage, bosses, HP,
+credits) for checking late-game content.
 
 ## Checking changes
 

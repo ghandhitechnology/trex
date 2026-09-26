@@ -76,37 +76,13 @@ impl Content {
             it.sprite_id = sprite(&it.sprite, &format!("item `{}`", it.id))?;
         }
         crate::items::resolve(&mut self.items, &mut self.synergies)?;
-        for e in &mut self.enemies {
-            let owner = format!("enemy `{}`", e.id);
-            e.sprite_id = sprite(&e.sprite, &owner)?;
-            if let crate::enemies::Behavior::Shoot { sprite: s, .. } = &e.behavior {
-                e.shot_id = sprite(s, &owner)?;
-            }
-        }
+        crate::enemies::resolve(&mut self.enemies)?;
         for ch in &mut self.characters {
             let owner = format!("character `{}`", ch.id);
             ch.sprite_id = sprite(&ch.sprite, &owner)?;
             ch.weapon.shot_id = sprite(&ch.weapon.shot, &owner)?;
         }
-        let enemy = |id: &str| {
-            self.enemies.iter().position(|e| e.id == id).ok_or_else(|| format!("waves: unknown enemy `{id}`"))
-        };
-        let mut phases = Vec::new();
-        for p in &self.waves.phases {
-            phases
-                .push(p.pool.iter().map(|(id, w)| Ok((enemy(id)?, *w))).collect::<Result<Vec<_>, String>>()?);
-        }
-        let events = self.waves.events.iter().map(|e| enemy(&e.enemy)).collect::<Result<Vec<_>, _>>()?;
-        for (p, kinds) in self.waves.phases.iter_mut().zip(phases) {
-            p.kinds = kinds;
-        }
-        for (e, kind) in self.waves.events.iter_mut().zip(events) {
-            e.kind = kind;
-        }
-        if self.waves.phases.is_empty() {
-            return Err("waves: no phases".into());
-        }
-        Ok(())
+        self.waves.resolve(&self.enemies)
     }
 
     pub fn character(&self, id: &str) -> Option<usize> {

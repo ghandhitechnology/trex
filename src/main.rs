@@ -28,7 +28,8 @@ usage:
 env:
   TREX_GFX=shm|file|direct   force the graphics transfer medium
   TREX_SCALE=N               force the integer upscale
-  TREX_SAVE=PATH             save file location";
+  TREX_SAVE=PATH             save file location
+  TREX_WARP=SECS             start the wave director that far into a run";
 
 struct Args(Vec<String>);
 

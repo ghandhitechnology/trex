@@ -56,9 +56,12 @@ impl Canvas {
     pub fn fill_rect(&mut self, x: i32, y: i32, w: i32, h: i32, c: Color) {
         let (x0, x1) = (x.clamp(0, self.w), (x + w).min(self.w));
         let (y0, y1) = (y.max(0), (y + h).min(self.h));
+        if x0 >= x1 {
+            return;
+        }
         for yy in y0..y1 {
             let row = (yy * self.w) as usize;
-            self.px[row + x0 as usize..row + x1.max(x0) as usize].fill(c);
+            self.px[row + x0 as usize..row + x1 as usize].fill(c);
         }
     }
 
