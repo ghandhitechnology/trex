@@ -46,4 +46,6 @@ pub fn draw(cv: &mut Canvas, w: &World, clock: f32) {
         cv.fill_rect(x0 + 1, y + 1, fill, 2, palette::SKY);
         cv.hline(x0 + 1, x0 + fill, y + 1, palette::CYAN);
     }
+
+    crate::items::draw::hud(cv, w, clock);
 }

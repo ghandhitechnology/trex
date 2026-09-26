@@ -131,6 +131,7 @@ pub fn spawn_shot(w: &mut World, pos: Vec2, dir: Vec2, ratio: f32, depth: u8, sp
         nhits: 0,
         age: 0.0,
         dead: false,
+        tag: Default::default(),
     });
 }
 

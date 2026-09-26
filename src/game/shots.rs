@@ -5,7 +5,7 @@ use std::f32::consts::{PI, TAU};
 use super::player;
 use super::world::{Hit, World};
 use crate::content;
-use crate::items::Stat;
+use crate::items::{Stat, weapons};
 use crate::render::palette;
 
 const HOMING_RANGE: f32 = 70.0;
@@ -33,6 +33,7 @@ pub fn update(w: &mut World, dt: f32) {
             s.vel = s.vel.rotate(diff.clamp(-s.homing * dt, s.homing * dt));
         }
 
+        weapons::steer(w, &mut s, dt);
         s.pos += s.vel * dt;
         if !w.arena.contains(s.pos) {
             s.dead = true;
@@ -65,7 +66,11 @@ pub fn update(w: &mut World, dt: f32) {
             let crit = w.rng.chance(w.stats.get(Stat::Crit));
             let damage = if crit { s.damage * w.stats.get(Stat::CritDamage) } else { s.damage };
             let knock = s.vel.norm() * s.knock;
-            w.damage_enemy(i, Hit { damage, knock, crit, depth: s.depth, procs: true });
+            let pos = w.enemies[i].pos;
+            w.damage_enemy(i, Hit { damage, knock, crit, depth: s.depth, procs: true, source: s.tag.source });
+            if let Some(k) = s.tag.weapon {
+                weapons::on_hit(w, k as usize, i, pos, s.tag.source, s.depth);
+            }
             w.fx.burst(s.pos, &[palette::CREAM, palette::GOLD], 3, 50.0);
             s.mark(uid);
             if s.pierce > 0 {
@@ -88,5 +93,6 @@ pub fn update(w: &mut World, dt: f32) {
         }
         w.shots[si] = s;
     }
+    weapons::shots_ended(w);
     w.shots.retain(|s| !s.dead);
 }

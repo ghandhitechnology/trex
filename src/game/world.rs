@@ -8,7 +8,8 @@ use crate::enemies::director::{self, Director};
 use crate::enemies::{self, Enemy};
 use crate::engine::{DT, Grid, Rect, Rng, Vec2};
 use crate::items::effects::{self, ActiveTrigger, GameEvent};
-use crate::items::{Build, On, Stat, Stats};
+use crate::items::weapons::{self, Gear, ShotTag};
+use crate::items::{Build, On, Source, Stat, Stats};
 use crate::render::camera::Camera;
 use crate::render::fx::Fx;
 use crate::render::palette::{self, Color};
@@ -37,6 +38,8 @@ pub struct Shot {
     pub nhits: usize,
     pub age: f32,
     pub dead: bool,
+    /// Item weapon and effect data.
+    pub tag: ShotTag,
 }
 
 impl Shot {
@@ -59,6 +62,7 @@ impl Shot {
             nhits: 0,
             age: 0.0,
             dead: false,
+            tag: ShotTag::default(),
         }
     }
 
@@ -91,6 +95,7 @@ pub struct Hit {
     pub depth: u8,
     /// Whether this hit fires `Hit` triggers (false for burn ticks).
     pub procs: bool,
+    pub source: Source,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -133,6 +138,8 @@ pub struct World {
     pub kills: u32,
     /// Level-ups earned but not yet picked.
     pub pending_levels: u32,
+    /// Item weapons and the objects items create.
+    pub gear: Gear,
     uid: u32,
 }
 
@@ -165,6 +172,7 @@ impl World {
             fx: Fx::new(seed, visuals),
             kills: 0,
             pending_levels: 0,
+            gear: Gear::default(),
             uid: 0,
         };
         w.refresh_build();
@@ -209,6 +217,7 @@ impl World {
             self.player.hp += gained;
         }
         self.player.hp = self.player.hp.min(self.max_hp());
+        weapons::refresh(self);
     }
 
     pub fn add_item(&mut self, item: usize) {
@@ -277,16 +286,17 @@ impl World {
         if hit.procs || hit.damage >= 1.0 {
             self.fx.number(pos + Vec2::new(0.0, -8.0), hit.damage, color);
         }
+        let (depth, source) = (hit.depth, hit.source);
         if hit.procs {
-            self.events.push_back(GameEvent { on: On::Hit, pos, target: Some(i), depth: hit.depth });
+            self.events.push_back(GameEvent { on: On::Hit, pos, target: Some(i), depth, source });
             if hit.crit {
-                self.events.push_back(GameEvent { on: On::Crit, pos, target: Some(i), depth: hit.depth });
+                self.events.push_back(GameEvent { on: On::Crit, pos, target: Some(i), depth, source });
             }
         }
         if killed {
             self.enemies[i].dead = true;
             self.kills += 1;
-            self.events.push_back(GameEvent { on: On::Kill, pos, target: Some(i), depth: hit.depth });
+            self.events.push_back(GameEvent { on: On::Kill, pos, target: Some(i), depth, source });
             self.gems.push(Gem {
                 pos,
                 vel: Vec2::from_angle(self.rng.angle()) * 30.0,
@@ -311,6 +321,7 @@ impl World {
         player::update(self, c, DT);
         self.rebuild_grid();
         player::fire(self, DT);
+        weapons::update(self, c, DT);
         director::update(self, DT);
         enemies::update(self, DT);
         self.rebuild_grid();
