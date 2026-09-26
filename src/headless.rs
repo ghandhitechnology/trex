@@ -6,7 +6,7 @@ use std::time::Instant;
 
 use crate::bot::Bot;
 use crate::engine::TICK_HZ;
-use crate::game::{Controls, Game, Scene, clock_text};
+use crate::game::{Controls, DEATH_TIME, Game, Scene, clock_text};
 use crate::meta::save::Save;
 use crate::render::canvas::Canvas;
 use crate::render::font;
@@ -26,7 +26,8 @@ pub struct DumpOptions<'a> {
 }
 
 /// Play a bot run and write PNG frames: the title, periodic gameplay frames,
-/// the first level-up screens, a pause overlay, and the death screen.
+/// the first level-up screens, a pause overlay, the death transition and the
+/// death screen.
 pub fn dump_frames(o: &DumpOptions) -> io::Result<()> {
     std::fs::create_dir_all(o.dir)?;
     let mut game = Game::new(Save::default(), None, o.seed, o.size, true);
@@ -59,7 +60,10 @@ pub fn dump_frames(o: &DumpOptions) -> io::Result<()> {
                 levelups += 1;
                 write(&format!("levelup_{levelups}.png"), &game, &mut cv)?;
             }
-            Scene::Dead(s) if s.age > 1.0 => {
+            Scene::Dying(t) if (*t - DEATH_TIME * 0.5).abs() < 0.5 / TICK_HZ as f32 => {
+                write("dying.png", &game, &mut cv)?;
+            }
+            Scene::Dead(s) if s.age > 1.6 => {
                 write("dead.png", &game, &mut cv)?;
                 break;
             }
@@ -158,4 +162,32 @@ pub fn sheet(path: &Path) -> io::Result<()> {
     png::write(path, &cv, PNG_SCALE)?;
     println!("wrote {} sprites to {}", sprites.len(), path.display());
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Visual effects (hit stop in particular) must never change a run.
+    #[test]
+    fn visuals_do_not_change_the_run() {
+        let run = |seed: u64, visuals: bool| {
+            let mut game = Game::new(Save::default(), None, seed, (256, 144), visuals);
+            game.start_run();
+            let mut bot = Bot::new(seed);
+            for _ in 0..TICK_HZ * 200 {
+                let c = bot.controls(&game);
+                game.update(&c);
+                let w = game.world.as_ref().expect("run has a world");
+                if w.time >= 150.0 || matches!(game.scene, Scene::Dead(_)) {
+                    break;
+                }
+            }
+            let w = game.world.as_ref().expect("run has a world");
+            (w.time.to_bits(), w.kills, w.player.hp, w.player.level)
+        };
+        for seed in 1..=8 {
+            assert_eq!(run(seed, false), run(seed, true), "seed {seed}");
+        }
+    }
 }

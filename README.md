@@ -12,7 +12,7 @@ trex --sheet sheet.png
 
 `--dump-frames` plays a bot run and writes 4x PNGs: `title.png`, a gameplay
 frame every `--every` seconds, the first three level-up screens, `paused.png`
-halfway, and `dead.png`. `--sim` runs bot games without rendering and prints
+halfway, `dying.png` mid death transition, and `dead.png`. `--sim` runs bot games without rendering and prints
 survival stats. Both are deterministic per seed.
 
 Env: `TREX_GFX=shm|file|direct` pins the transfer medium, `TREX_SCALE=N`
