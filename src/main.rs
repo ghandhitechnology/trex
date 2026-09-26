@@ -8,6 +8,7 @@ mod headless;
 mod items;
 mod meta;
 mod render;
+mod sim;
 mod term;
 mod ui;
 
@@ -21,8 +22,11 @@ usage:
   trex                                  play
   trex --dump-frames DIR [--seconds N] [--seed S] [--every SECS] [--size WxH] [--hero ID]
                                         bot run, write PNG frames (4x)
-  trex --sim [--runs N] [--seed S] [--max-secs N] [--hero ID]
-                                        bot runs without rendering, print stats
+  trex --sim [--runs N] [--seed S] [--max-secs N] [--hero ID] [--save fresh|unlocked|maxed] [--items]
+                                        bot runs without rendering, print survival per hero
+                                        (--items adds pick rates and survival deltas per item)
+  trex --meta [--runs N] [--seed S] [--max-secs N]
+                                        bot runs on one save, print unlock and feat pacing
   trex --stress [--minutes N] [--seed S] [--size WxH] [--hero ID]
                                         unkillable bot run, print entity counts and frame cost
   trex --sheet FILE                     write every sprite to one PNG
@@ -86,9 +90,22 @@ fn run(args: &Args) -> Result<(), String> {
         return headless::dump_frames(&opts).map_err(|e| e.to_string());
     }
     if args.flag("--sim") {
-        let (runs, seed, max_secs) =
-            (args.parse("--runs", 20)?, args.parse("--seed", 1)?, args.parse("--max-secs", 1800.0)?);
-        headless::sim(runs, seed, max_secs, hero(args)?);
+        sim::sim(&sim::SimOptions {
+            runs: args.parse("--runs", 20)?,
+            seed: args.parse("--seed", 1)?,
+            max_secs: args.parse("--max-secs", 3600.0)?,
+            hero: hero(args)?,
+            start: args.value("--save").map_or(Ok(sim::Start::Fresh), sim::Start::parse)?,
+            items: args.flag("--items"),
+        });
+        return Ok(());
+    }
+    if args.flag("--meta") {
+        sim::meta_sim(
+            args.parse("--runs", 200)?,
+            args.parse("--seed", 1)?,
+            args.parse("--max-secs", 3600.0)?,
+        );
         return Ok(());
     }
     if args.flag("--stress") {

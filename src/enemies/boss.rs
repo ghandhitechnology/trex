@@ -64,7 +64,7 @@ pub const ERUPT_RADIUS: f32 = 26.0;
 pub const CHARGE_LOCK: f32 = 0.5;
 pub const SNIPE_LOCK: f32 = 0.3;
 pub const ERUPT_LOCK: f32 = 0.75;
-const CHARGE_SPEED: f32 = 250.0;
+pub const CHARGE_SPEED: f32 = 250.0;
 
 fn moves(kind: BossKind, rage: u8) -> &'static [Move] {
     use BossKind as B;

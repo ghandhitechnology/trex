@@ -124,63 +124,6 @@ fn dump_hub(o: &DumpOptions) -> io::Result<usize> {
     Ok(shots.len())
 }
 
-pub struct RunStats {
-    pub time: f32,
-    pub level: u32,
-    pub kills: u32,
-    pub items: usize,
-}
-
-/// Play one bot run with no rendering until death or `max_secs`.
-pub fn sim_run(seed: u64, max_secs: f32, hero: Option<&str>) -> RunStats {
-    let mut game = Game::new(start_save(hero), None, seed, (256, 144), false);
-    game.start_run();
-    let mut bot = Bot::new(seed);
-    loop {
-        let c = bot.controls(&game);
-        game.update(&c);
-        let w = game.world.as_ref().expect("run has a world");
-        if matches!(game.scene, Scene::Dying(_) | Scene::Dead(_)) || w.time >= max_secs {
-            return RunStats {
-                time: w.time,
-                level: w.player.level,
-                kills: w.kills,
-                items: w.build.items.iter().map(|(_, n)| *n as usize).sum(),
-            };
-        }
-    }
-}
-
-pub fn sim(runs: u32, seed: u64, max_secs: f32, hero: Option<&str>) {
-    let start = Instant::now();
-    let mut stats: Vec<RunStats> =
-        (0..runs as u64).map(|r| sim_run(seed.wrapping_add(r), max_secs, hero)).collect();
-    stats.sort_by(|a, b| a.time.total_cmp(&b.time));
-    let n = stats.len().max(1) as f32;
-    let mean = |f: &dyn Fn(&RunStats) -> f32| stats.iter().map(f).sum::<f32>() / n;
-    let capped = stats.iter().filter(|s| s.time >= max_secs).count();
-    println!("runs      {runs}  seeds {seed}..{}", seed.wrapping_add(runs as u64));
-    if let (Some(lo), Some(hi)) = (stats.first(), stats.last()) {
-        println!(
-            "survival  mean {}  median {}  min {}  max {}",
-            clock_text(mean(&|s| s.time)),
-            clock_text(stats[stats.len() / 2].time),
-            clock_text(lo.time),
-            clock_text(hi.time),
-        );
-    }
-    println!(
-        "level     mean {:.1}   kills mean {:.0}   items mean {:.1}",
-        mean(&|s| s.level as f32),
-        mean(&|s| s.kills as f32),
-        mean(&|s| s.items as f32)
-    );
-    if capped > 0 {
-        println!("capped    {capped} runs hit the {} limit", clock_text(max_secs));
-    }
-    println!("elapsed   {:.2}s", start.elapsed().as_secs_f32());
-}
-
 /// An unkillable bot run with visuals on that renders and upscales every
 /// tick like the live loop, printing entity counts and frame cost per minute.
 pub fn stress(minutes: f32, seed: u64, size: (i32, i32), hero: Option<&str>) {
