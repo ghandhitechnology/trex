@@ -8,6 +8,7 @@ use crate::bot::Bot;
 use crate::engine::TICK_HZ;
 use crate::game::{Controls, DEATH_TIME, Game, Scene, clock_text};
 use crate::meta;
+use crate::meta::Toasts;
 use crate::meta::hub::{Hub, Tab};
 use crate::meta::save::Save;
 use crate::render::canvas::Canvas;
@@ -96,31 +97,157 @@ pub fn dump_frames(o: &DumpOptions) -> io::Result<()> {
     Ok(())
 }
 
+/// Hub screens shown by `--dump-frames` and `--clip --show NAME`: tab and
+/// hero, shop, or feat cursor (clamped to the last feat).
+pub const HUB_SHOTS: [(&str, Tab, usize); 6] = [
+    ("hub_heroes", Tab::Heroes, 0),
+    ("hub_locked", Tab::Heroes, 3),
+    ("hub_shop", Tab::Shop, 2),
+    ("hub_items", Tab::Shop, 10),
+    ("hub_feats", Tab::Feats, 4),
+    ("hub_feats_end", Tab::Feats, usize::MAX),
+];
+
+/// A game on hub shot `shot` over a mid-progress save, settled for a moment.
+fn hub_game(seed: u64, size: (i32, i32), shot: usize) -> Game {
+    let content = crate::content::get();
+    let (_, tab, pick) = HUB_SHOTS[shot];
+    let mut game = Game::new(meta::demo_save(), None, seed, size, true);
+    let mut hub = Hub::new(pick.min(content.characters.len() - 1));
+    hub.tab = tab;
+    (hub.shop, hub.feat) = (pick, pick.min(content.meta.feats.len() - 1));
+    game.scene = Scene::Hub(hub);
+    for _ in 0..20 {
+        game.update(&Controls::default());
+    }
+    game
+}
+
 /// Hub screens over a mid-progress save.
 fn dump_hub(o: &DumpOptions) -> io::Result<usize> {
-    let mut game = Game::new(meta::demo_save(), None, o.seed, o.size, true);
     let mut cv = Canvas::new(o.size.0, o.size.1);
-    let last_feat = crate::content::get().meta.feats.len() - 1;
-    let shots: [(&str, Tab, usize); 6] = [
-        ("hub_heroes.png", Tab::Heroes, 0),
-        ("hub_locked.png", Tab::Heroes, 3),
-        ("hub_shop.png", Tab::Shop, 2),
-        ("hub_items.png", Tab::Shop, 10),
-        ("hub_feats.png", Tab::Feats, 4),
-        ("hub_feats_end.png", Tab::Feats, last_feat),
-    ];
-    for (name, tab, pick) in shots {
-        let mut hub = Hub::new(pick.min(crate::content::get().characters.len() - 1));
-        hub.tab = tab;
-        (hub.shop, hub.feat) = (pick, pick);
-        game.scene = Scene::Hub(hub);
-        for _ in 0..20 {
-            game.update(&Controls::default());
-        }
-        game.render(&mut cv);
-        png::write(&o.dir.join(name), &cv, PNG_SCALE)?;
+    for (shot, (name, ..)) in HUB_SHOTS.iter().enumerate() {
+        hub_game(o.seed, o.size, shot).render(&mut cv);
+        png::write(&o.dir.join(format!("{name}.png")), &cv, PNG_SCALE)?;
     }
-    Ok(shots.len())
+    Ok(HUB_SHOTS.len())
+}
+
+/// What a clip shows.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Show {
+    Run,
+    Title,
+    /// The run's pause screen after focus is lost.
+    Paused,
+    /// An index into `HUB_SHOTS`.
+    Hub(usize),
+}
+
+impl Show {
+    pub fn parse(s: &str) -> Result<Show, String> {
+        match s {
+            "run" => Ok(Show::Run),
+            "title" => Ok(Show::Title),
+            "paused" => Ok(Show::Paused),
+            _ => HUB_SHOTS.iter().position(|h| h.0 == s).map(Show::Hub).ok_or_else(|| {
+                let hubs: Vec<_> = HUB_SHOTS.iter().map(|h| h.0).collect();
+                format!("--show must be run, title, paused or one of {}, not {s}", hubs.join(", "))
+            }),
+        }
+    }
+}
+
+pub struct ClipOptions<'a> {
+    pub dir: &'a Path,
+    pub from: f32,
+    pub seconds: f32,
+    pub fps: u32,
+    pub size: (i32, i32),
+    pub seed: u64,
+    pub hero: Option<&'a str>,
+    pub start: Start,
+    /// Items granted when the run starts, repeated for stacks.
+    pub items: Vec<usize>,
+    /// Seconds into the clip to level up; its card screen stays up a moment.
+    pub levelup: Option<f32>,
+    pub show: Show,
+}
+
+/// Seconds a forced level-up's cards stay up before the bot picks.
+const CARD_HOLD: f32 = 1.4;
+
+/// Fast-forward an unkillable bot run to `from` without rendering, then write
+/// every frame at 1x for `seconds`. Level-up screens are skipped unless one
+/// is forced with `levelup`, so the footage stays on the action.
+pub fn clip(o: &ClipOptions) -> io::Result<()> {
+    std::fs::create_dir_all(o.dir)?;
+    let frames = ((o.seconds * o.fps as f32).round() as usize).max(1);
+    let every = (TICK_HZ / o.fps.clamp(1, TICK_HZ)) as u64;
+    let run = matches!(o.show, Show::Run | Show::Paused);
+    let mut game = match o.show {
+        Show::Hub(shot) => {
+            let mut game = hub_game(o.seed, o.size, shot);
+            game.toasts = Toasts::default();
+            game
+        }
+        _ => Game::new(start_save(o.hero, o.start), None, o.seed, o.size, true),
+    };
+    let mut bot = Bot::new(o.seed);
+    let hold = if o.levelup.is_some() { CARD_HOLD } else { 0.0 };
+    let mut advance = |game: &mut Game| {
+        let c = match &game.scene {
+            Scene::LevelUp(offer) if offer.age < hold => Controls::default(),
+            _ if run => bot.controls(game),
+            _ => Controls::default(),
+        };
+        game.update(&c);
+        if let Some(w) = game.world.as_mut() {
+            w.player.hp = w.max_hp();
+        }
+    };
+
+    if run {
+        game.start_run();
+        let w = game.world.as_mut().expect("run has a world");
+        for &item in &o.items {
+            w.add_item(item);
+        }
+        while game.world.as_ref().is_some_and(|w| w.time < o.from) {
+            advance(&mut game);
+        }
+        if o.show == Show::Paused {
+            game.focus_lost();
+        }
+    }
+
+    let levelup = o.levelup.map(|s| (s * TICK_HZ as f32) as u64);
+    let mut cv = Canvas::new(o.size.0, o.size.1);
+    let (mut tick, mut written) = (0u64, 0);
+    loop {
+        if o.levelup.is_none() && matches!(game.scene, Scene::LevelUp(_)) {
+            advance(&mut game);
+            continue;
+        }
+        if tick.is_multiple_of(every) {
+            game.render(&mut cv);
+            png::write(&o.dir.join(format!("{written:04}.png")), &cv, 1)?;
+            written += 1;
+            if written == frames {
+                break;
+            }
+        }
+        if levelup == Some(tick)
+            && let Some(w) = game.world.as_mut()
+        {
+            w.player.xp = w.player.xp_next;
+        }
+        advance(&mut game);
+        tick += 1;
+    }
+    let time = game.world.as_ref().map_or(0.0, |w| w.time);
+    println!("wrote {written} frames to {} (at {})", o.dir.display(), clock_text(time));
+    Ok(())
 }
 
 /// An unkillable bot run with visuals on that renders and upscales every

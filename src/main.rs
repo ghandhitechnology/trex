@@ -22,6 +22,9 @@ usage:
   trex                                  play
   trex --dump-frames DIR [--seconds N] [--seed S] [--every SECS] [--size WxH] [--hero ID] [--save fresh|unlocked|maxed]
                                         bot run, write PNG frames (4x)
+  trex --clip DIR [--from SECS] [--seconds N] [--fps N] [--size WxH] [--seed S] [--hero ID]
+       [--save fresh|unlocked|maxed] [--items ID,ID] [--levelup SECS] [--show run|title|paused|hub_*]
+                                        unkillable bot run, write every frame (1x) as footage
   trex --sim [--runs N] [--seed S] [--max-secs N] [--hero ID] [--save fresh|unlocked|maxed] [--items]
                                         bot runs without rendering, print survival per hero
                                         (--items adds pick rates and survival deltas per item)
@@ -89,6 +92,32 @@ fn run(args: &Args) -> Result<(), String> {
             start: args.value("--save").map_or(Ok(sim::Start::Fresh), sim::Start::parse)?,
         };
         return headless::dump_frames(&opts).map_err(|e| e.to_string());
+    }
+    if let Some(dir) = args.value("--clip") {
+        let items = args.value("--items").map_or(Ok(Vec::new()), |ids| {
+            ids.split(',')
+                .map(|id| {
+                    content::get().items.iter().position(|it| it.id == id).ok_or(format!("unknown item {id}"))
+                })
+                .collect::<Result<Vec<_>, _>>()
+        })?;
+        let opts = headless::ClipOptions {
+            dir: &PathBuf::from(dir),
+            from: args.parse("--from", 0.0)?,
+            seconds: args.parse("--seconds", 5.0)?,
+            fps: args.parse("--fps", 30)?,
+            size: args.value("--size").map_or(Ok((256, 144)), size)?,
+            seed: args.parse("--seed", 1)?,
+            hero: hero(args)?,
+            start: args.value("--save").map_or(Ok(sim::Start::Fresh), sim::Start::parse)?,
+            items,
+            levelup: args
+                .value("--levelup")
+                .map(|v| v.parse().map_err(|_| format!("bad value for --levelup: {v}")))
+                .transpose()?,
+            show: args.value("--show").map_or(Ok(headless::Show::Run), headless::Show::parse)?,
+        };
+        return headless::clip(&opts).map_err(|e| e.to_string());
     }
     if args.flag("--sim") {
         sim::sim(&sim::SimOptions {
