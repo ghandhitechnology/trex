@@ -1,41 +1,46 @@
-/* A pocket version of trex: real sprites, WASD, Space to dash, auto-fire.
-   It pauses when the canvas loses focus, the same way trex pauses on tmux focus-out. */
+/* A pocket version of trex that lives in the hero's game pane: real sprites,
+   WASD, Space to dash, auto-fire. Click the pane to take over. It pauses when
+   the canvas loses focus, the same way trex pauses on tmux focus-out. */
 (function () {
   'use strict';
   const cv = document.querySelector('.arena');
   if (!cv) return;
   const T = window.TREX;
   const ctx = cv.getContext('2d');
-  const over = document.querySelector('.arena-over');
-  const overText = over.querySelector('[data-px]');
-  const score = document.querySelector('.arena-score');
+  const H0 = window.TREX_HERO;
+  const pane = H0.pane;
+  const takeBtn = pane.querySelector('.takeover');
+  const hint = pane.querySelector('.pane-hint');
+  const FINE = matchMedia('(hover: hover) and (pointer: fine)').matches;
   const W = 256, H = 144;
   const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const P = { ink: '#0f0b18', night: '#1d1629', dusk: '#2d2340', slate: '#45395c', bone: '#f5efe0', fog: '#c9c2d4', haze: '#948aa6', red: '#cc3a3f', ember: '#ef6b3a', amber: '#f7a041', gold: '#ffd25e', cream: '#fff4b0', sky: '#3e9ce0', cyan: '#74dcee', lime: '#7cc84b', grape: '#7a36a0', pink: '#da4f9e', sand: '#dca56f', clay: '#955c38' };
   const rand = (a, b) => a + Math.random() * (b - a);
 
+  // Sprites come out of the same atlas the page uses.
+  const atlas = new Image();
+  atlas.src = T.atlas.src;
   const IMG = {};
   const need = { rex: 'rex', rexIdle: 'rex-idle', grub: 'grub', mite: 'mite', slime: 'slime', slimelet: 'slimelet', bolt: 'bolt', gem: 'gem', heart: 'heart-full', heartE: 'heart-empty', skull: 'skull', tuft: 'p-tuft', rock: 'p-rock', bone: 'p-bone' };
-  let loaded = 0;
-  const total = Object.keys(need).length;
   Object.entries(need).forEach(([k, slug]) => {
     const s = T.spr[slug];
-    const img = new Image();
-    img.onload = () => { if (++loaded === total) { draw(0); } };
-    img.src = 'assets/' + s[0];
-    IMG[k] = { img, w: s[1], h: s[2], n: s[3] };
+    const at = T.atlas.at[s[0]];
+    IMG[k] = { x: at[0], y: at[1], w: s[1], h: s[2], n: s[3] };
   });
+  let loaded = 0;
+  const total = 1;
+  atlas.onload = () => { loaded = 1; draw(0); };
 
   function spr(k, x, y, frame = 0, flip = false) {
     const s = IMG[k];
-    if (!s || !s.img.complete) return;
+    if (!s || !loaded) return;
     const f = frame % s.n;
     x = Math.round(x - s.w / 2); y = Math.round(y - s.h / 2);
     if (flip) {
       ctx.save(); ctx.translate(x + s.w, y); ctx.scale(-1, 1);
-      ctx.drawImage(s.img, f * s.w, 0, s.w, s.h, 0, 0, s.w, s.h);
+      ctx.drawImage(atlas, s.x + f * s.w, s.y, s.w, s.h, 0, 0, s.w, s.h);
       ctx.restore();
-    } else ctx.drawImage(s.img, f * s.w, 0, s.w, s.h, x, y, s.w, s.h);
+    } else ctx.drawImage(atlas, s.x + f * s.w, s.y, s.w, s.h, x, y, s.w, s.h);
   }
 
   // Floor: checker tiles plus a few props, drawn once.
@@ -50,7 +55,7 @@
       f.fillRect(x, y, 16, 1); f.fillRect(x, y, 1, 16);
     }
     const props = [['tuft', 30, 24], ['rock', 210, 30], ['bone', 60, 120], ['tuft', 180, 110], ['tuft', 236, 80], ['rock', 20, 90], ['bone', 150, 40]];
-    for (const [k, x, y] of props) { const s = IMG[k]; if (s.img.complete) f.drawImage(s.img, 0, 0, s.w, s.h, x, y, s.w, s.h); }
+    for (const [k, x, y] of props) { const s = IMG[k]; f.drawImage(atlas, s.x, s.y, s.w, s.h, x, y, s.w, s.h); }
   }
 
   let state;
@@ -73,32 +78,75 @@
     if (['w', 'a', 's', 'd', ' '].includes(k)) e.preventDefault();
     if (k === ' ' && !e.repeat) dash();
     if (k === 'p' || k === 'escape') { cv.blur(); return; }
+    if (k === 'q') { quit(); return; }
     keys.add(k);
   });
   cv.addEventListener('keyup', (e) => { keys.delete(ARROWS[e.key.toLowerCase()] || e.key.toLowerCase()); });
   const toLocal = (e) => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) / r.width * W, y: (e.clientY - r.top) / r.height * H }; };
-  cv.addEventListener('pointerdown', (e) => { pointer = toLocal(e); cv.setPointerCapture(e.pointerId); if (e.pointerType !== 'mouse' && e.detail > 1) dash(); });
+  let lastTap = 0, lastPt = null;
+  cv.addEventListener('pointerdown', (e) => {
+    pointer = toLocal(e);
+    cv.setPointerCapture(e.pointerId);
+    if (e.pointerType !== 'mouse') {
+      const now = performance.now();
+      if (now - lastTap < 320 && lastPt && Math.hypot(pointer.x - lastPt.x, pointer.y - lastPt.y) < 30) dash();
+      lastTap = now; lastPt = pointer;
+    }
+  });
   cv.addEventListener('pointermove', (e) => { if (pointer) pointer = toLocal(e); });
   const up = () => { pointer = null; };
   cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
   cv.addEventListener('dblclick', dash);
 
+  let hintT = 0;
+  function say(msg, ms) {
+    hint.classList.toggle('m', !!msg);
+    let m = hint.querySelector('.msg');
+    if (!m) { m = document.createElement('span'); m.className = 'msg'; hint.appendChild(m); }
+    m.textContent = msg || '';
+    pane.classList.add('hint');
+    clearTimeout(hintT);
+    hintT = setTimeout(() => pane.classList.remove('hint'), ms);
+  }
+  function takeover() {
+    if (!pane.classList.contains('booted')) H0.boot();
+    pane.classList.remove('away');
+    H0.user = true;
+    pane.classList.add('playing');
+    H0.reel.pause();
+    if (!state.t) say('', 2800);
+    start();
+  }
   function start() {
-    over.classList.add('off');
     playing = true;
+    pane.classList.remove('away');
+    H0.focus('trex');
     cv.focus({ preventScroll: true });
     if (!raf) { last = 0; raf = requestAnimationFrame(loop); }
   }
-  function pause(label) {
+  function pause() {
     playing = false;
     keys.clear(); pointer = null;
-    overText.textContent = label; delete overText.dataset.pxDone; PX.render(overText);
-    over.classList.remove('off');
+    H0.stamp(FINE ? 'click to resume' : 'tap to resume');
+    pane.classList.add('away');
+    H0.focus('agent');
   }
-  over.addEventListener('click', start);
-  cv.addEventListener('focus', () => { if (!playing) start(); });
-  cv.addEventListener('blur', () => { if (playing) pause('Paused'); });
+  function quit() {
+    const k = state.kills;
+    playing = false; keys.clear(); pointer = null;
+    pane.classList.remove('playing', 'away');
+    H0.user = false;
+    H0.focus('trex');
+    cv.blur();
+    reset();
+    const p = H0.reel.play(); if (p && p.catch) p.catch(() => {});
+    say(`Run banked · ${k} kills`, 2200);
+  }
+  takeBtn.addEventListener('click', takeover);
+  cv.addEventListener('focus', () => { if (!playing && pane.classList.contains('playing')) start(); });
+  cv.addEventListener('blur', () => { if (playing) pause(); });
   new IntersectionObserver(([e]) => { if (!e.isIntersecting && playing) cv.blur(); }).observe(cv);
+  window.TREX_ARENA = { takeover };
 
   function dash() {
     const p = state.p;
@@ -148,7 +196,7 @@
     if (p.dash > 0) { p.dash -= dt; p.trail.push({ x: p.x, y: p.y, life: 0.2, face: p.face }); }
     p.dcd = Math.max(0, p.dcd - dt); p.inv = Math.max(0, p.inv - dt);
     p.x = Math.max(8, Math.min(W - 8, p.x + p.vx * dt));
-    p.y = Math.max(10, Math.min(H - 16, p.y + p.vy * dt));
+    p.y = Math.max(26, Math.min(H - 22, p.y + p.vy * dt));
     if (Math.abs(p.vx) > 4) p.face = p.vx < 0 ? -1 : 1;
     p.trail = p.trail.filter((t) => (t.life -= dt) > 0);
 
@@ -264,7 +312,7 @@
     const secs = Math.floor(s.t), clock = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
     PX.drawText(ctx, clock, Math.round(W / 2 - PX.measure(clock)), 4, 2, P.bone, P.ink);
     const kt = String(s.kills);
-    spr('skull', W - 12 - PX.measure(kt) - 8, 8);
+    spr('skull', W - 6 - PX.measure(kt) - 7, 8);
     PX.drawText(ctx, kt, W - 6 - PX.measure(kt), 6, 1, P.bone, P.ink);
     // xp bar
     ctx.fillStyle = P.ink; ctx.fillRect(4, H - 7, W - 8, 4);
@@ -273,7 +321,6 @@
     PX.drawText(ctx, 'LV' + s.lv, 5, H - 15, 1, P.gold, P.ink);
     if (s.banner > 0) { const txt = 'LEVEL UP'; PX.drawText(ctx, txt, Math.round(W / 2 - PX.measure(txt)), 40, 2, P.gold, P.ink); }
     if (s.dead > 0) { const txt = 'YOU DIED'; PX.drawText(ctx, txt, Math.round(W / 2 - PX.measure(txt) * 1.5), 60, 3, P.red, P.ink); }
-    score.textContent = `${s.kills} kills · LV ${s.lv}`;
   }
 
   function loop(t) {

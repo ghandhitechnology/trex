@@ -33,6 +33,7 @@
   <link rel="stylesheet" href="assets/palette.css">
   <link rel="stylesheet" href="css/site.css">
   <link rel="preload" as="image" href="assets/video/reel.png">
+  <link rel="preload" as="image" href="assets/sprites/atlas.png">
   <script>document.documentElement.classList.add('js');</script>
 </head>
 <body>
@@ -58,7 +59,7 @@
     </nav>
     <div class="nav-hud">
       <div class="kills" aria-live="polite" title="Critters squashed on this page">
-        <span class="spr" style="--w:8;--h:8;--s:3"><img src="assets/sprites/ui/skull.png" alt=""></span>
+        <span class="kills-ico"></span>
         <span class="kills-n">0</span>
       </div>
       <span class="xp-lv" aria-hidden="true" title="Scroll to level up">LV 1</span>
@@ -80,11 +81,11 @@
   <div class="wrap hero-in">
     <p class="eyebrow"><span class="num">$ trex</span> roguelite · kitty graphics · tmux · rust</p>
     <h1 data-px data-px-bands data-px-depth="1">Survive the build.</h1>
-    <div class="hero-sub">
+    <div class="hero-row">
       <p class="lede">A pixel roguelite that runs <span class="hl">inside your terminal</span>. Split a tmux pane, type <b>trex</b>, and play while your agent works.</p>
-      <div class="cta-row">
+      <div class="cta">
         <a class="btn" data-burst href="https://github.com/ghandhitechnology/trex" rel="noopener">
-          <svg aria-hidden="true"><use href="#gh"/></svg><span>Star on GitHub</span><svg class="star" aria-hidden="true" style="width:18px;height:18px"><use href="#star"/></svg>
+          <svg aria-hidden="true"><use href="#gh"/></svg><span>Star on GitHub</span><span class="stars" hidden><svg class="star" aria-hidden="true"><use href="#star"/></svg><b class="stars-n"></b></span>
         </a>
         <div class="install">
           <code><span class="sigil">$</span>cargo install --git https://github.com/ghandhitechnology/trex</code>
@@ -94,22 +95,28 @@
     </div>
 
     <div class="stage">
-      <div class="term" role="img" aria-label="A terminal running tmux. The left pane shows a coding agent working through tests. In the right pane someone types trex and the game starts: a green dinosaur fighting hordes of pixel monsters.">
+      <div class="term">
         <div class="term-bar"><i class="dot"></i><i class="dot"></i><i class="dot"></i><span class="term-title">tmux · ~/api</span></div>
         <div class="term-body">
-          <div class="pane pane-agent"><pre class="agent-log"></pre></div>
+          <div class="pane pane-agent" aria-hidden="true"><pre class="agent-log"></pre></div>
+          <div class="tborder" aria-hidden="true"></div>
           <div class="pane pane-trex">
-            <div class="shell"><span class="path">~/api</span> <span class="caret">❯</span> <span class="typed"></span><span class="cursor"></span></div>
+            <div class="shell" aria-hidden="true"><span class="path">~/api</span> <span class="caret">❯</span> <span class="typed"></span><span class="cursor"></span></div>
             <div class="screen">
-              <img class="poster" src="assets/video/reel.png" alt="" width="1024" height="576">
-              <video class="reel" muted loop playsinline preload="auto" poster="assets/video/reel.png">
-                <source src="assets/video/reel.webm" type="video/webm">
+              <img class="poster" src="assets/video/reel.png" alt="trex gameplay: a green dinosaur holding off a swarm of pixel monsters" width="256" height="144">
+              <video class="reel" muted loop playsinline preload="metadata" poster="assets/video/reel.png" aria-hidden="true">
                 <source src="assets/video/reel.mp4" type="video/mp4">
               </video>
+              <canvas class="arena" width="256" height="144" tabindex="-1" aria-label="Playable demo. WASD or arrow keys move, Space dashes, Q quits."></canvas>
+              <div class="stamp" aria-hidden="true">
+                <div class="stamp-box"><span class="stamp-t" data-px>Paused</span><span class="stamp-s">focus-out · 8 fps</span></div>
+              </div>
+              <div class="pane-hint" aria-hidden="true"><span class="fine">WASD move · Space dash · Q quit</span><span class="touch">Tap and hold to move · Double-tap to dash</span></div>
+              <button class="takeover" type="button"><i></i><span class="fine">Click the pane to take over</span><span class="touch">Tap to take over</span></button>
             </div>
           </div>
         </div>
-        <div class="tmux-status"><span>[api]</span><span class="win">0:zsh</span><span class="win cur">1:dev*</span><span class="spacer"></span><span class="host">"mbp"</span><span class="clock">00:00</span></div>
+        <div class="tmux-status" aria-hidden="true"><span>[api]</span><span class="win">0:zsh</span><span class="win cur">1:dev*</span><span class="spacer"></span><span class="focus-tag">trex</span><span class="host">"mbp"</span><span class="clock">00:00</span></div>
       </div>
       <div class="term-tag" aria-hidden="true">Real gameplay · 256×144</div>
     </div>
@@ -122,16 +129,19 @@
 <!-- ============ RUN ============ -->
 <section class="sec" id="run">
   <div class="wrap">
-    <div class="sec-head sec-head--split" data-reveal>
-      <p class="eyebrow"><span class="num">01</span><span class="rule"></span>the run</p>
+    <div class="head-run" data-reveal>
       <h2 data-px>From one grub to <em>seven thousand.</em></h2>
+      <div class="killboard" aria-label="7,941 kills by 14:43">
+        <span class="kb-ico"></span><span class="kb-n" data-px>0</span>
+        <span class="kb-l">kills by 14:43 · LV 41 · one rex</span>
+      </div>
       <p>Weapons fire themselves. You steer, dash, and take one card per level. Every three minutes something large walks in.</p>
     </div>
     <div class="run" data-reveal style="--d:1">
-      <div>
+      <div class="run-main">
         <div class="screen-frame px-frame">
-          <div class="vid scan">
-            <img class="run-poster" src="assets/video/early.png" alt="" width="1024" height="576" loading="lazy">
+          <div class="vid" data-fit="run">
+            <img class="run-poster" src="assets/video/early.png" alt="" width="256" height="144">
             <video class="run-video" muted playsinline preload="none" poster="assets/video/early.png"></video>
             <div class="swap"></div>
           </div>
@@ -152,31 +162,38 @@
 <!-- ============ HOW ============ -->
 <section class="sec sec--alt" id="how">
   <div class="wrap">
-    <div class="sec-head" data-reveal>
-      <p class="eyebrow"><span class="num">02</span><span class="rule"></span>the trick</p>
-      <h2 data-px>Four hops <em>to your pane.</em></h2>
-      <p>trex paints straight into your terminal with the kitty graphics protocol, sixty times a second, right through tmux.</p>
+    <div class="head-how" data-reveal>
+      <p class="esc-eyebrow" aria-hidden="true"><span class="e">ESC_G</span>a=T,U=1,i=229,f=24,t=s;<span class="p">L3RyZXgtNDgyMTMtMA==</span><span class="e">ESC\</span></p>
+      <h2 data-px>Straight into <em>your pane.</em></h2>
+      <p>trex paints into your terminal with the kitty graphics protocol, sixty times a second, right through tmux. Look away and it waits.</p>
     </div>
     <div class="pipe">
       <div class="pipe-vis">
         <div class="pipe-screen px-frame" id="pipe-screen">
           <div class="pv pv-draw on" data-pv="0">
+            <canvas class="zoom" width="256" height="144" data-src="assets/video/late-chaos.png" data-fx="80" data-fy="46"></canvas>
             <span class="pv-label">256 × 144 · RGB</span>
-            <div class="grid-img"><img src="assets/video/late-chaos.png" alt="" loading="lazy"><div class="pxgrid"></div></div>
           </div>
-          <div class="pv" data-pv="1">
+          <div class="pv pv-code" data-pv="1">
             <span class="pv-label">KITTY GRAPHICS · ONE FRAME</span>
-            <p class="esc"><span class="e">ESC_G</span><span class="k">a</span>=<span class="v">T</span>,<span class="k">U</span>=<span class="v">1</span>,<span class="k">i</span>=<span class="v">229</span>,<span class="k">f</span>=<span class="v">24</span>,<span class="k">s</span>=<span class="v">1024</span>,<span class="k">v</span>=<span class="v">576</span>,<span class="k">c</span>=<span class="v">96</span>,<span class="k">r</span>=<span class="v">27</span>,<span class="k">q</span>=<span class="v">2</span>,<span class="k">t</span>=<span class="v">s</span>,<span class="k">S</span>=<span class="v">1769472</span>;<span class="p">L3RyZXgtNDgyMTMtMA==</span><span class="e">ESC\</span></p><p class="esc-note">t=s: the pixels sit in shared memory at /trex-48213-0. The escape only carries the name.</p>
+            <p class="esc"><span class="e">ESC_G</span><span class="k">a</span>=<span class="v">T</span>,<wbr><span class="k">U</span>=<span class="v">1</span>,<wbr><span class="k">i</span>=<span class="v">229</span>,<wbr><span class="k">f</span>=<span class="v">24</span>,<wbr><span class="k">s</span>=<span class="v">1024</span>,<wbr><span class="k">v</span>=<span class="v">576</span>,<wbr><span class="k">c</span>=<span class="v">96</span>,<wbr><span class="k">r</span>=<span class="v">27</span>,<wbr><span class="k">q</span>=<span class="v">2</span>,<wbr><span class="k">t</span>=<span class="v">s</span>,<wbr><span class="k">S</span>=<span class="v">1769472</span>;<wbr><span class="p">L3RyZXgtNDgyMTMtMA==</span><span class="e">ESC\</span></p>
+            <p class="esc-note">t=s: the pixels sit in shared memory at /trex-48213-0. The escape only carries the name.</p>
             <div class="flow" aria-hidden="true"><span>trex</span><i></i><span>shm · 1.7 MB</span><i></i><span>kitty</span></div>
           </div>
-          <div class="pv" data-pv="2">
+          <div class="pv pv-code" data-pv="2">
             <span class="pv-label">TMUX PASSTHROUGH</span>
-            <p class="esc"><span class="e2">ESC Ptmux;</span><span class="e">ESC</span><span class="e">ESC_G</span><span class="k">a</span>=<span class="v">T</span>,<span class="k">U</span>=<span class="v">1</span>,<span class="k">i</span>=<span class="v">229</span>,…;<span class="p">L3RyZXgtNDgyMTMtMA==</span><span class="e">ESC</span><span class="e">ESC\</span><span class="e2">ESC\</span></p><p class="esc-note">Every ESC inside is doubled so tmux hands the whole thing to the outer terminal untouched.</p>
+            <p class="esc"><span class="e2">ESC Ptmux;</span><wbr><span class="e">ESC</span><span class="e">ESC_G</span><span class="k">a</span>=<span class="v">T</span>,<wbr><span class="k">U</span>=<span class="v">1</span>,<wbr><span class="k">i</span>=<span class="v">229</span>,…;<wbr><span class="p">L3RyZXgtNDgyMTMtMA==</span><span class="e">ESC</span><span class="e">ESC\</span><span class="e2">ESC\</span></p>
+            <p class="esc-note">Every ESC inside is doubled so tmux hands the whole thing to the outer terminal untouched.</p>
             <div class="flow" aria-hidden="true"><span>trex</span><i></i><span>tmux</span><i></i><span>ghostty</span></div>
           </div>
           <div class="pv pv-pin" data-pv="3">
+            <div class="cells"><img src="assets/video/boss-mire-queen.png" alt="" loading="lazy" width="256" height="144"><div class="cellgrid"></div><div class="cellpop"></div></div>
             <span class="pv-label">U+10EEEE · PLACEHOLDER CELLS</span>
-            <div class="cells"><img src="assets/video/boss-mire-queen.png" alt="" loading="lazy"><div class="cellgrid"></div><div class="cellpop"></div><div class="cellnote"><b>U+10EEEE</b> + row U+0305<br>+ col U+030D · fg 38;5;229</div></div>
+            <div class="cellnote"><b>U+10EEEE</b> + row U+0305 + col U+030D</div>
+          </div>
+          <div class="pv pv-wait" data-pv="4">
+            <img src="assets/video/paused.png" alt="" loading="lazy" width="256" height="144">
+            <span class="pv-label">FOCUS-OUT · 8 FPS</span>
           </div>
         </div>
       </div>
@@ -184,25 +201,31 @@
         <li class="step" data-step="0">
           <span class="k">01 · DRAW</span>
           <h3 data-px>One tiny framebuffer</h3>
-          <p>Every frame is a single 256×144 image painted on the CPU. Sprites, font, lighting and particles are all drawn in code. There are no asset files to ship.</p>
+          <p>Every frame is a single 256×144 image painted on the CPU. Sprites, font, lighting and particles are all drawn in code. No asset files ship with it.</p>
           <div class="inline-vis"></div>
         </li>
         <li class="step" data-step="1">
           <span class="k">02 · SHIP</span>
           <h3 data-px>Pixels by reference</h3>
-          <p>The frame is scaled up by a whole number and dropped into shared memory, with a temp file as backup. Only a short escape crosses the pty, pointing at it. A ring of eight slots keeps the terminal fed.</p>
+          <p>The frame is scaled by a whole number and dropped into shared memory. Only a short escape crosses the pty, pointing at it.</p>
           <div class="inline-vis"></div>
         </li>
         <li class="step" data-step="2">
           <span class="k">03 · PASS</span>
           <h3 data-px>Straight through tmux</h3>
-          <p>Inside tmux the escape rides DCS passthrough to the real terminal. Same image id every frame, so each new frame simply replaces the last.</p>
+          <p>Inside tmux the escape rides DCS passthrough to the real terminal. Same image id every frame, so each one replaces the last.</p>
           <div class="inline-vis"></div>
         </li>
         <li class="step" data-step="3">
           <span class="k">04 · PIN</span>
           <h3 data-px>Glued to the pane</h3>
-          <p>The picture is placed with Unicode placeholder cells, <code>U+10EEEE</code> plus row and column marks. tmux thinks it is text, so splits, zooms and redraws keep the game exactly where it belongs.</p>
+          <p>Placeholder cells pin the picture to the pane, so splits, zooms and redraws keep it right where it belongs.</p>
+          <div class="inline-vis"></div>
+        </li>
+        <li class="step" data-step="4">
+          <span class="k">05 · WAIT</span>
+          <h3 data-px>Look away, it waits</h3>
+          <p>Switch panes to read your agent's diff and trex pauses itself, then idles at 8 fps until you come back.</p>
           <div class="inline-vis"></div>
         </li>
       </ol>
@@ -213,13 +236,13 @@
 <!-- ============ HEROES ============ -->
 <section class="sec" id="heroes">
   <div class="wrap">
-    <div class="sec-head sec-head--split" data-reveal>
-      <p class="eyebrow"><span class="num">03</span><span class="rule"></span>the roster</p>
-      <h2 data-px>Seven dinos. <em>One bad day.</em></h2>
-      <p>Each dino brings its own shot and a trick that fires on dash, hit, hurt or crit. Rex is free. The rest cost bones or a feat.</p>
-    </div>
-    <div class="hub px-frame" data-reveal style="--d:1" tabindex="-1">
+    <div class="hub px-frame" data-reveal tabindex="-1">
       <div class="hub-bg" aria-hidden="true"></div>
+      <div class="hub-top" aria-hidden="true"><span>Heroes</span><span class="hub-bones"><span class="hb-ico"></span>310</span></div>
+      <div class="head-hub">
+        <h2 data-px>Seven dinos. <em>One bad day.</em></h2>
+        <p>Each dino brings its own shot and a trick that fires on dash, hit, hurt or crit. Rex is free. The rest cost bones or a feat.</p>
+      </div>
       <ul class="tiles" role="tablist" aria-label="Pick a dino"></ul>
       <div class="hub-main" role="tabpanel" aria-live="polite">
         <div class="hub-dino"><div class="shadow"></div></div>
@@ -243,14 +266,13 @@
 <!-- ============ BUILDS ============ -->
 <section class="sec sec--alt" id="builds">
   <div class="wrap">
-    <div class="sec-head" data-reveal>
-      <p class="eyebrow"><span class="num">04</span><span class="rule"></span>the build</p>
-      <h2 data-px>Every run builds <em>different.</em></h2>
-      <p>54 items stack and collide. Hold the right pair and a synergy switches on. Take a card below and see where your build goes.</p>
+    <div class="head-lvl" data-reveal>
+      <div class="lvl-banner"><span class="lvl-gem"></span><h2 data-px data-px-bands>Every run builds <em>different.</em></h2><span class="lvl-gem"></span></div>
+      <p>54 items stack and collide. Hold the right pair and a synergy switches on. Take a card and see where your build goes.</p>
     </div>
     <div class="builds">
       <div class="deal px-frame" data-reveal style="--d:1">
-        <div class="deal-top"><h3 data-px data-px-bands>Level up</h3><button class="link-btn deal-reset" type="button">Reset run</button></div>
+        <div class="deal-top"><h3 data-px>Level up</h3><button class="link-btn deal-reset" type="button">Reset run</button></div>
         <div class="cards" role="group" aria-label="Pick one item"></div>
         <div class="tray" aria-label="Your build"><span class="empty">Your build is empty. Take a card.</span></div>
         <div class="deal-foot"><span class="kbd-hint">1 2 3 take · R reroll</span><button class="link-btn deal-reroll" type="button">Reroll</button></div>
@@ -261,82 +283,79 @@
       </div>
     </div>
     <div class="armory" data-reveal>
-      <p class="armory-title"><b>Armory</b> All 54 items. Hover for the details, click one to add it to your build.</p>
+      <p class="armory-title"><b>Armory</b> All 54 items. Hover for details, click one to add it to your build.</p>
       <div class="armory-groups"></div>
     </div>
   </div>
 </section>
 
 <!-- ============ BESTIARY ============ -->
-<section class="sec" id="bestiary">
+<section class="sec sec--boss" id="bestiary">
+  <div class="hazard" aria-hidden="true"><div class="hazard-track"></div></div>
   <div class="wrap">
-    <div class="sec-head sec-head--split" data-reveal>
-      <p class="eyebrow"><span class="num">05</span><span class="rule"></span>the bestiary</p>
+    <div class="head-boss" data-reveal>
       <h2 data-px>Things that want <em>you dead.</em></h2>
       <p>18 enemies, 5 bosses, 8 stages. A boss every three minutes, a new floor every two and a half, and it never runs out.</p>
     </div>
     <div class="bosses" data-reveal></div>
-    <div class="beasts-wrap">
-      <ul class="beasts" data-reveal></ul>
-      <aside class="stages-card px-frame" data-reveal style="--d:1">
-        <div class="screen-frame" style="padding:0">
-          <div class="vid scan">
-            <img src="assets/video/biome-shift.png" alt="" loading="lazy" width="1024" height="576">
-            <video data-lazy muted loop playsinline preload="none" poster="assets/video/biome-shift.png"><source data-src="assets/video/biome-shift.webm" type="video/webm"><source data-src="assets/video/biome-shift.mp4" type="video/mp4"></video>
-          </div>
-          <div class="cap"><span><i class="live"></i><span>10:00 · Storm Wraith falls</span></span><span class="dim">Bone Dunes</span></div>
+    <div class="spawn" data-reveal>
+      <div class="spawn-head"><span>Spawn table</span><span class="spawn-clock">0:00</span></div>
+      <div class="spawn-scroll">
+        <div class="spawn-band">
+          <div class="spawn-stages"></div>
+          <div class="spawn-lanes"></div>
+          <div class="spawn-axis"><span>0:00</span><span>3:00</span><span>6:00</span><span>9:00</span><span>12:00</span><span>15:00</span></div>
+          <div class="spawn-head-line"></div>
         </div>
-        <ol class="stages"></ol>
-      </aside>
+      </div>
+      <div class="readout px-frame" aria-live="polite">
+        <div class="ro-fig"></div>
+        <div class="ro-info">
+          <span class="ro-new">New enemy</span>
+          <h3 class="ro-name" data-px>Grub</h3>
+          <p class="ro-desc"></p>
+          <p class="ro-stats"></p>
+        </div>
+      </div>
     </div>
   </div>
 </section>
 
 <!-- ============ CONTROLS ============ -->
-<section class="sec sec--alt" id="controls">
-  <div class="wrap">
-    <div class="sec-head" data-reveal>
-      <p class="eyebrow"><span class="num">06</span><span class="rule"></span>the keys</p>
+<section class="sec sec--alt sec--tight" id="controls">
+  <div class="wrap controls">
+    <div class="ctrl-copy" data-reveal>
       <h2 data-px>WASD. Space. <em>Done.</em></h2>
+      <p>Weapons aim and fire on their own. Your job is to not be where the monsters are. <code>P</code> pauses, <code>Q</code> quits and banks the run.</p>
+      <button class="btn btn--ghost btn--sm play-up" type="button">Play it in the pane up top</button>
+      <details class="nerd">
+        <summary>Why movement feels smooth in tmux</summary>
+        <p>tmux never reports key release, so trex reads key repeat with a short hold window and smooths your velocity.</p>
+      </details>
     </div>
-    <div class="controls">
-      <div data-reveal>
-        <div class="ksplit">
-          <div class="kpad">
-            <span class="key" data-key="w">W<small>UP</small></span>
-            <span class="key" data-key="a">A<small>LEFT</small></span>
-            <span class="key" data-key="s">S<small>DOWN</small></span>
-            <span class="key" data-key="d">D<small>RIGHT</small></span>
-          </div>
-          <div class="krow krow--pq">
-            <span class="key" data-key="p">P<small>PAUSE</small></span>
-            <span class="key" data-key="q">Q<small>QUIT</small></span>
-          </div>
-        </div>
-        <div class="krow"><span class="key wide gold" data-key=" ">SPACE<small>DASH · FIRE YOUR ACTIVE</small></span></div>
-        <div class="ctrl-notes">
-          <p>Weapons aim and fire on their own. Your job is to not be where the monsters are.</p>
-          <p>tmux never reports key release, so trex reads key repeat with a short hold window and smooths your velocity. Movement stays continuous.</p>
-          <p>Switch panes and it pauses itself, then idles at 8 fps until you come back. Needs <code>focus-events on</code>.</p>
-        </div>
+    <div class="keys" data-reveal style="--d:1" aria-hidden="true">
+      <div class="kpad">
+        <span class="key" data-key="w">W</span>
+        <span class="key" data-key="a">A</span>
+        <span class="key" data-key="s">S</span>
+        <span class="key" data-key="d">D</span>
       </div>
-      <div class="arena-wrap" data-reveal style="--d:1">
-        <div class="px-frame" style="padding:12px">
-          <canvas class="arena" width="256" height="144" tabindex="0" aria-label="Playable demo. Use WASD or arrow keys to move and Space to dash."></canvas>
-          <button class="arena-over" type="button"><span data-px>Click to play</span><span class="sub">WASD move · Space dash</span></button>
-        </div>
-        <div class="arena-cap"><span>Tiny demo, real sprites</span><span class="arena-score">0 kills</span></div>
+      <span class="key wide gold" data-key=" ">SPACE<small>DASH · ACTIVE</small></span>
+      <div class="krow">
+        <span class="key" data-key="p">P</span>
+        <span class="key" data-key="q">Q</span>
       </div>
     </div>
+    <p class="keys-line" aria-hidden="true"><span><kbd>WASD</kbd> move</span><span><kbd>SPACE</kbd> dash</span><span><kbd>P</kbd> pause</span><span><kbd>Q</kbd> quit</span></p>
   </div>
 </section>
 
 <!-- ============ SETUP ============ -->
 <section class="sec" id="setup">
   <div class="wrap">
-    <div class="sec-head sec-head--split" data-reveal>
-      <p class="eyebrow"><span class="num">07</span><span class="rule"></span>the setup</p>
-      <h2 data-px>Three lines <em>to play.</em></h2>
+    <div class="head-setup" data-reveal>
+      <p class="prompt" aria-hidden="true"><span class="path">~</span> <span class="caret">❯</span> trex --setup<span class="cursor"></span></p>
+      <h2 data-px>Install, split, <em>play.</em></h2>
       <p>One Rust binary. Ghostty or Kitty to draw it. tmux if you want it next to your work, which you do.</p>
     </div>
     <div class="setup">
@@ -382,10 +401,10 @@
 <!-- ============ FINAL CTA ============ -->
 <section class="final" id="play">
   <div class="final-bg" aria-hidden="true">
-    <video data-lazy muted loop playsinline preload="none" poster="assets/video/late-chaos.png"><source data-src="assets/video/late-chaos.webm" type="video/webm"><source data-src="assets/video/late-chaos.mp4" type="video/mp4"></video>
+    <video data-lazy data-fit="cover" muted loop playsinline preload="none" poster="assets/video/late-chaos.png"><source data-src="assets/video/late-chaos.mp4" type="video/mp4"></video>
   </div>
-  <div class="wrap" data-reveal>
-    <h2 data-px class="center" data-px-accent-depth="2">Your agent is <em>still thinking.</em></h2>
+  <div class="wrap final-in" data-reveal>
+    <h2 data-px class="center" data-px-depth="1">Your agent is <em>still thinking.</em></h2>
     <p>Plenty of time for one more run.</p>
     <div class="cta-row">
       <a class="btn" data-burst href="https://github.com/ghandhitechnology/trex" rel="noopener">
