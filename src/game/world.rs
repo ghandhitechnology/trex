@@ -11,8 +11,8 @@ use crate::items::effects::{self, ActiveTrigger, GameEvent};
 use crate::items::{Build, On, Stat, Stats};
 use crate::render::camera::Camera;
 use crate::render::fx::Fx;
-use crate::render::palette::{self, Color};
-use crate::render::sprite::{SpriteId, bank};
+use crate::render::palette;
+use crate::render::sprite::SpriteId;
 
 /// Arena size in world pixels. The view is smaller and follows the player.
 pub const ARENA: Rect = Rect::new(0.0, 0.0, 512.0, 320.0);
@@ -214,6 +214,7 @@ impl World {
     pub fn add_item(&mut self, item: usize) {
         self.build.add(item);
         self.refresh_build();
+        self.fx.level_up(self.player.pos);
         self.events.push_back(GameEvent::at(On::LevelUp, self.player.pos, 0));
         effects::process(self);
     }
@@ -295,12 +296,7 @@ impl World {
                 age: 0.0,
                 dead: false,
             });
-            if self.fx.enabled {
-                let colors: Vec<Color> =
-                    bank().get(def.sprite_id).colors.iter().take(4).map(|&c| palette::color(c)).collect();
-                self.fx.debris(pos, &colors, 10);
-                self.fx.burst(pos, &[palette::BONE, palette::CREAM], 5, 60.0);
-            }
+            self.fx.kill(pos, def.sprite_id, def.hp >= 40.0);
         }
         killed
     }

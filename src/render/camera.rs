@@ -6,11 +6,15 @@ pub struct Camera {
     pub view: (i32, i32),
     trauma: f32,
     shake: Vec2,
+    /// Clock for the shake noise.
+    t: f32,
+    /// Random phase so shakes differ between runs.
+    seed: f32,
 }
 
 impl Camera {
     pub fn new(center: Vec2, view: (i32, i32)) -> Self {
-        Self { center, view, trauma: 0.0, shake: Vec2::ZERO }
+        Self { center, view, trauma: 0.0, shake: Vec2::ZERO, t: 0.0, seed: 0.0 }
     }
 
     /// Add shake. Trauma is capped at 1; offset grows with trauma squared.
@@ -26,9 +30,17 @@ impl Camera {
         };
         self.center.x = clamp_axis(self.center.x, bounds.x - 12.0, bounds.w + 24.0, half.x);
         self.center.y = clamp_axis(self.center.y, bounds.y - 12.0, bounds.h + 24.0, half.y);
-        self.trauma = (self.trauma - dt * 1.6).max(0.0);
-        let mag = 6.0 * self.trauma * self.trauma;
-        self.shake = Vec2::new(rng.range(-mag, mag), rng.range(-mag, mag));
+        // Smooth shake: layered sines instead of white noise, so a hit reads as
+        // a jolt that rings out rather than per-frame jitter.
+        if self.trauma <= 0.0 {
+            self.seed = rng.range(0.0, 100.0);
+        }
+        self.t += dt;
+        self.trauma = (self.trauma - dt * 1.9).max(0.0);
+        let mag = 5.0 * self.trauma * self.trauma;
+        let (t, s) = (self.t * 38.0, self.seed);
+        let wob = |a: f32, b: f32| (t * a + s).sin() * 0.6 + (t * b + s * 1.7).sin() * 0.4;
+        self.shake = Vec2::new(wob(1.0, 2.3), wob(1.3, 1.9)) * mag;
     }
 
     /// World coordinate at the top-left screen pixel.

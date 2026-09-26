@@ -29,6 +29,10 @@ impl Bot {
 
     fn steer(&mut self, g: &Game, c: &mut Controls) {
         let Some(w) = &g.world else { return };
+        // Frozen ticks are skipped by the game; stay in step with the sim.
+        if w.fx.hitstop > 0.0 {
+            return;
+        }
         let enemies = &content::get().enemies;
         let p = w.player.pos;
 

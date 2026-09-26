@@ -153,6 +153,7 @@ pub fn hurt(w: &mut World, dmg: i32, from: Vec2) {
     p.vel += (pos - from).norm() * 120.0;
     w.fx.shake(0.55);
     w.fx.flash = 0.08;
+    w.fx.freeze(0.07);
     w.fx.burst(pos, &[palette::RED, palette::BLOOD, palette::BONE], 14, 90.0);
     w.events.push_back(GameEvent::at(On::Hurt, pos, 0));
 }

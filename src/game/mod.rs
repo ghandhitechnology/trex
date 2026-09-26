@@ -67,7 +67,7 @@ pub enum Signal {
     Quit,
 }
 
-const DEATH_TIME: f32 = 1.4;
+pub const DEATH_TIME: f32 = 1.4;
 const MENU_GUARD: f32 = 0.35;
 
 pub struct Game {
@@ -80,7 +80,7 @@ pub struct Game {
     /// UI animation clock, seconds.
     pub clock: f32,
     pub view: (i32, i32),
-    pub floor: Option<Canvas>,
+    pub floor: Option<arena::Floor>,
     seed: u64,
     runs: u64,
     visuals: bool,
@@ -116,6 +116,9 @@ impl Game {
         let seed = self.seed.wrapping_add(self.runs.wrapping_mul(0x9e37_79b9_7f4a_7c15));
         self.runs += 1;
         self.world = Some(World::new(seed, self.character, self.view, self.visuals));
+        if self.visuals {
+            self.floor = Some(arena::floor(world::ARENA, seed));
+        }
         self.recorded = false;
         self.scene = Scene::Playing;
     }
@@ -166,6 +169,10 @@ impl Game {
                     return Signal::None;
                 }
                 let w = self.world.as_mut().expect("playing without a world");
+                if w.fx.hitstop > 0.0 {
+                    w.fx.hitstop -= DT;
+                    return Signal::None;
+                }
                 w.step(c);
                 if w.player.hp <= 0 {
                     let pos = w.player.pos;
@@ -293,19 +300,19 @@ impl Game {
         match (&self.scene, &self.world) {
             (Scene::Title, _) | (_, None) => ui::screens::title(cv, self),
             (scene, Some(w)) => {
-                scene::draw_world(
-                    cv,
-                    w,
-                    self.floor.as_ref(),
-                    matches!(scene, Scene::Dying(_) | Scene::Dead(_)),
-                );
-                if matches!(scene, Scene::Playing | Scene::Paused | Scene::Dying(_)) {
+                let death = match scene {
+                    Scene::Dying(t) => Some(1.0 - t / DEATH_TIME),
+                    Scene::Dead(_) => Some(1.0),
+                    _ => None,
+                };
+                scene::draw_world(cv, w, self.floor.as_ref(), death);
+                if matches!(scene, Scene::Playing | Scene::Paused) {
                     ui::hud::draw(cv, w, self.clock);
                 }
                 match scene {
-                    Scene::Paused => ui::screens::paused(cv, self.clock),
+                    Scene::Paused => ui::screens::paused(cv, w, self.clock),
                     Scene::LevelUp(o) => ui::screens::level_up(cv, w, o, self.clock),
-                    Scene::Dead(s) => ui::screens::dead(cv, s, self.clock),
+                    Scene::Dead(s) => ui::screens::dead(cv, w, s, self.clock),
                     _ => {}
                 }
             }

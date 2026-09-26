@@ -18,9 +18,9 @@ pub fn title(cv: &mut Canvas, g: &Game) {
     let bank = bank();
     match &g.floor {
         Some(f) => {
-            let sx = ((g.clock * 0.08).sin() * 110.0) as i32 + f.w / 2 - cv.w / 2;
-            let sy = ((g.clock * 0.05).cos() * 50.0) as i32 + f.h / 2 - cv.h / 2 - PAD / 2;
-            cv.copy_view(f, sx, sy, INK);
+            let sx = ((g.clock * 0.08).sin() * 110.0) as i32 + f.cv.w / 2 - cv.w / 2;
+            let sy = ((g.clock * 0.05).cos() * 50.0) as i32 + f.cv.h / 2 - cv.h / 2 - PAD / 2;
+            cv.copy_view(&f.cv, sx, sy, INK);
         }
         None => cv.clear(palette::DUSK),
     }
@@ -65,7 +65,7 @@ pub fn title(cv: &mut Canvas, g: &Game) {
     font::draw_centered(cv, cx, cv.h - 9, "WASD MOVE  SPACE DASH  P PAUSE  Q QUIT", palette::HAZE, INK);
 }
 
-pub fn paused(cv: &mut Canvas, clock: f32) {
+pub fn paused(cv: &mut Canvas, _w: &World, clock: f32) {
     cv.wash(INK, 150);
     let (cx, cy) = (cv.w / 2, cv.h / 2);
     font::draw_big_centered(cv, cx, cy - 14, "PAUSED", palette::BONE, INK, 2);
@@ -154,7 +154,7 @@ pub fn level_up(cv: &mut Canvas, w: &World, o: &Offer, clock: f32) {
     font::draw_centered(cv, cx, cv.h - 16, "A D SELECT   SPACE TAKE", palette::HAZE, INK);
 }
 
-pub fn dead(cv: &mut Canvas, s: &Summary, clock: f32) {
+pub fn dead(cv: &mut Canvas, _w: &World, s: &Summary, clock: f32) {
     let bank = bank();
     cv.wash(INK, 120);
     let cx = cv.w / 2;
