@@ -32,6 +32,9 @@ pub struct Controls {
     pub quit: bool,
     pub yes: bool,
     pub no: bool,
+    /// Direction edges for menus (WASD or arrows).
+    pub up: bool,
+    pub down: bool,
     pub left: bool,
     pub right: bool,
     /// Number keys 1-9 in menus.

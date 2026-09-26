@@ -24,6 +24,8 @@ const REPEAT_WINDOW: Duration = Duration::from_millis(150);
 const DELAY_MARGIN: Duration = Duration::from_millis(90);
 /// Gaps shorter than this are treated as an OS repeat stream.
 const REPEAT_MAX_GAP: Duration = Duration::from_millis(120);
+/// Menu navigation edges repeat at most this often while a key is held.
+const NAV_REPEAT: Duration = Duration::from_millis(140);
 
 #[derive(Clone, Copy, Default)]
 struct Hold {
@@ -39,6 +41,8 @@ pub struct Input {
     delay: Duration,
     interval: Duration,
     edges: Controls,
+    /// Last menu navigation edge per direction.
+    nav_at: [Option<Instant>; 4],
     /// Ctrl-C: leave immediately.
     pub force_quit: bool,
 }
@@ -51,6 +55,7 @@ impl Default for Input {
             delay: Duration::from_millis(450),
             interval: Duration::from_millis(40),
             edges: Controls::default(),
+            nav_at: [None; 4],
             force_quit: false,
         }
     }
@@ -131,14 +136,20 @@ impl Input {
 
     fn press_direction(&mut self, d: usize, now: Instant) {
         let fresh = !self.held(d, now);
+        // Menus step on every tap, and about 7 times a second while held.
+        if fresh || self.nav_at[d].is_none_or(|t| now.duration_since(t) >= NAV_REPEAT) {
+            self.nav_at[d] = Some(now);
+            let e = &mut self.edges;
+            match d {
+                UP => e.up = true,
+                DOWN => e.down = true,
+                LEFT => e.left = true,
+                _ => e.right = true,
+            }
+        }
         if fresh {
             self.holds[d] = Hold { last: Some(now), repeats: 0, first_gap: Duration::ZERO };
             self.holds[opposite(d)] = Hold::default();
-            match d {
-                LEFT => self.edges.left = true,
-                RIGHT => self.edges.right = true,
-                _ => {}
-            }
             return;
         }
         let h = &mut self.holds[d];
@@ -211,6 +222,27 @@ mod tests {
         // Released shortly after the last repeat, not after the long initial window.
         assert_eq!(i.controls(ms(1100)).move_x, 1.0);
         assert_eq!(i.controls(ms(1150)).move_x, 0.0);
+    }
+
+    #[test]
+    fn menu_edges_on_quick_taps_and_throttled_repeats() {
+        let t0 = Instant::now();
+        let ms = |n: u64| t0 + Duration::from_millis(n);
+        let mut i = Input::default();
+        press(&mut i, t0);
+        assert!(i.controls(t0).right);
+        // A second tap inside the hold window still steps the menu.
+        press(&mut i, ms(200));
+        assert!(i.controls(ms(200)).right);
+        // A fast repeat stream steps at most once per NAV_REPEAT.
+        let steps = (0..10)
+            .filter(|k| {
+                let t = ms(600 + k * 30);
+                press(&mut i, t);
+                i.controls(t).right
+            })
+            .count();
+        assert_eq!(steps, 2);
     }
 
     #[test]
