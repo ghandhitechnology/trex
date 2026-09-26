@@ -3,6 +3,7 @@
 
 pub mod input;
 pub mod kitty;
+pub mod link;
 
 use std::io::{self, Write};
 use std::sync::Once;

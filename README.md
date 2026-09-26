@@ -34,6 +34,8 @@ Needs Rust 1.85 or newer. The save lives in
   game pause when you switch panes.
 - Any pane size works; the picture scales to fit. Around 100x30 cells or
   larger looks best.
+- Over SSH the picture is softer, which keeps it light enough to stay smooth
+  on a slow connection.
 
 ## Controls
 
@@ -62,6 +64,7 @@ trex --sheet sheet.png
   `--meta` shows when unlocks and feats land over many runs. `--stress`
   prints entity counts and frame cost per minute.
 - `TREX_GFX=shm|file|direct` pins the image transfer, `TREX_SCALE=N` pins the
-  upscale, `TREX_WARP=SECS` starts the waves that far in.
+  upscale, `TREX_WARP=SECS` starts the waves that far in. `TREX_DEBUG=1`
+  prints the image transfer, and over SSH the link's round trip, on exit.
 
 Spec: `DESIGN.md`. Content format: `content/README.md`.

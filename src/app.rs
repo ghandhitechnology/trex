@@ -15,8 +15,8 @@ use crate::meta::save;
 use crate::render::canvas::Canvas;
 use crate::render::palette::Color;
 use crate::term::input::Input;
-use crate::term::kitty::{self, MAX_CELLS, Medium, Presenter};
-use crate::term::{self, PaneSize, Session};
+use crate::term::kitty::{self, AnswerFilter, MAX_CELLS, Medium, Presenter};
+use crate::term::{self, PaneSize, Session, link};
 
 /// Logical framebuffer area in pixels (about 256x144, reshaped to the pane).
 const TARGET_AREA: f32 = 256.0 * 144.0;
@@ -55,17 +55,16 @@ impl Layout {
     }
 
     /// Integer upscale so the terminal's own (linear) scaling stays small.
-    fn scale(&self, medium: Medium) -> usize {
-        if let Some(k) = std::env::var("TREX_SCALE").ok().and_then(|v| v.parse::<usize>().ok()) {
-            return k.clamp(1, 8);
-        }
-        if medium == Medium::Direct {
-            return 1;
-        }
+    fn scale(&self) -> usize {
         let fit = (self.disp_w / self.lw as f32).min(self.disp_h / self.lh as f32);
         let budget = (PIXEL_BUDGET / (self.lw * self.lh) as f32).sqrt();
         fit.min(budget).floor().max(1.0) as usize
     }
+}
+
+/// `TREX_SCALE` pins the upscale.
+fn forced_scale() -> Option<usize> {
+    std::env::var("TREX_SCALE").ok().and_then(|v| v.parse::<usize>().ok()).map(|k| k.clamp(1, 8))
 }
 
 fn pick_medium() -> (Medium, bool) {
@@ -79,7 +78,7 @@ fn pick_medium() -> (Medium, bool) {
 fn frame_interval(game: &Game, focused: bool, medium: Medium) -> Duration {
     let fps = match (&game.scene, focused) {
         (_, false) | (Scene::Paused, _) => 8.0,
-        _ if medium == Medium::Direct => 30.0,
+        _ if medium == Medium::Direct => link::FPS,
         _ if game.is_live() => 60.0,
         _ => 30.0,
     };
@@ -116,21 +115,37 @@ pub fn run() -> io::Result<()> {
     drop(session);
     if std::env::var_os("TREX_DEBUG").is_some() {
         eprintln!("trex: graphics medium {:?}, image id {}", presenter.medium, presenter.id);
+        if presenter.medium == Medium::Direct {
+            eprintln!("trex: link {}", presenter.link_summary());
+        }
     }
     result
 }
 
+/// What the input thread hands the loop, stamped on arrival.
+enum Incoming {
+    Event(Event),
+    /// The terminal answered a graphics command for this image id.
+    Answer(u32),
+}
+
 /// Terminal events, read on their own thread and stamped on arrival.
+/// Graphics answers are split out of the key stream here.
 ///
 /// crossterm's reader spins forever once the terminal hangs up (a closed pane
 /// reads as endless EOF), so it must never block the game loop. The loop
 /// notices the hangup through failed writes or SIGHUP and exits; the stuck
 /// thread dies with the process.
-fn spawn_input() -> Receiver<(Event, Instant)> {
+fn spawn_input() -> Receiver<(Incoming, Instant)> {
     let (tx, rx) = mpsc::channel();
     thread::spawn(move || {
+        let mut filter = AnswerFilter::default();
+        let mut pass = Vec::new();
         while let Ok(ev) = event::read() {
-            if tx.send((ev, Instant::now())).is_err() {
+            let at = Instant::now();
+            let answer = filter.feed(ev, &mut pass).map(Incoming::Answer);
+            let out = pass.drain(..).map(Incoming::Event).chain(answer);
+            if out.map(|m| tx.send((m, at))).any(|r| r.is_err()) {
                 break;
             }
         }
@@ -154,10 +169,18 @@ fn play(game: &mut Game, presenter: &mut Presenter, mut layout: Layout, stop: &A
     let mut dirty = true;
     // Last frame the terminal was sent; an identical frame is skipped.
     let mut shown: Vec<Color> = Vec::new();
+    let forced = forced_scale();
 
     while !stop.load(Ordering::Relaxed) {
         let mut resized = false;
-        for (ev, at) in woke.take().into_iter().chain(events.try_iter()) {
+        for (msg, at) in woke.take().into_iter().chain(events.try_iter()) {
+            let ev = match msg {
+                Incoming::Event(ev) => ev,
+                Incoming::Answer(id) => {
+                    presenter.answered(id, at);
+                    continue;
+                }
+            };
             match ev {
                 Event::Key(k) => input.key(k, at),
                 Event::FocusLost => {
@@ -203,12 +226,17 @@ fn play(game: &mut Game, presenter: &mut Presenter, mut layout: Layout, stop: &A
         if (steps > 0 || dirty) && now.duration_since(last_frame) + FRAME_SLACK >= interval {
             game.render(&mut canvas);
             let changed = canvas.px != shown || !presenter.settled();
-            let k = layout.scale(presenter.medium);
-            if changed && presenter.present(&mut out, &canvas, k, layout.cols, layout.rows)? {
-                shown.clone_from(&canvas.px);
+            let (k, fixed) = forced.map_or((layout.scale(), false), |k| (k, true));
+            dirty = false;
+            if changed {
+                if presenter.present(&mut out, &canvas, k, fixed, layout.cols, layout.rows)? {
+                    shown.clone_from(&canvas.px);
+                } else {
+                    // Dropped while the terminal catches up; try again next frame.
+                    dirty = true;
+                }
             }
             last_frame = now;
-            dirty = false;
         }
         if !out.is_empty() {
             stdout.write_all(&out)?;
