@@ -173,7 +173,6 @@
 
   // ---------- Small sprite fills ----------
   $('.kills-ico').appendChild(sprite('skull', 3));
-  $('.kb-ico').appendChild(sprite('skull', 5));
   $('.hb-ico').appendChild(sprite('bone', 2));
   $$('.lvl-gem').forEach((g) => g.appendChild(sprite('gem-big', 4)));
 
@@ -246,7 +245,7 @@
   HERO.focus('trex');
   $('.pane-agent').addEventListener('click', () => HERO.focus('agent'));
 
-  // Agent pane: a coding agent grinding through tasks. When it finishes,
+  // Agent pane: Claude Code working through tasks. When it finishes,
   // focus moves over, the game pauses, you review, focus comes back.
   const log = $('.agent-log');
   const HISTORY = [
@@ -263,30 +262,244 @@
     '',
   ];
   const TASKS = [
-    { ask: 'fix the flaky ledger tests', read: ['tests/ledger_test.rs', 'src/ledger/mod.rs', 'src/ledger/refund.rs'], found: 'refund() races the balance write.', edit: ['src/ledger/refund.rs', 18, 6], test: 'cargo test ledger', total: 412, reply: 'ship it', after: 'Pushed. PR #214 is up.' },
-    { ask: 'move sessions to the new store', read: ['src/auth/session.rs', 'src/store/mod.rs', 'migrations/0042_sessions.sql'], found: 'three call sites still hit the old cache.', edit: ['src/auth/session.rs', 64, 41], test: 'cargo test auth', total: 188, reply: 'lgtm, merge', after: 'Merged into main.' },
-    { ask: 'bump deps and fix what breaks', read: ['Cargo.toml', 'src/http/client.rs', 'src/http/retry.rs'], found: 'reqwest 0.13 renamed the timeout builder.', edit: ['src/http/client.rs', 9, 9], test: 'cargo test', total: 1204, reply: 'nice. push it', after: 'Pushed. CI is green.' },
+    {
+      ask: 'fix the flaky ledger tests',
+      reads: [['tests/ledger_test.rs', 212], ['src/ledger/refund.rs', 96]],
+      found: '`refund()` reads the balance before the write lands. Locking the row first closes the race.',
+      file: 'src/ledger/refund.rs',
+      diff: [[41, ' ', '    let tx = db.begin().await?;'], [42, '-', '    let bal = balance(&tx, id).await?;'], [42, '+', '    let row = lock_row(&tx, id).await?;'], [43, '+', '    let bal = row.balance;'], [44, ' ', '    refund_into(&tx, bal, amount).await?;']],
+      test: 'cargo test ledger', total: 412, secs: '2.91',
+      done: 'Fixed. `refund()` now locks the row before reading the balance, and all 412 ledger tests pass.',
+      reply: 'ship it', ship: ['git push -u origin fix/ledger-race', "branch 'fix/ledger-race' set up to track 'origin/fix/ledger-race'."], after: 'Pushed. PR #214 is up.',
+    },
+    {
+      ask: 'move sessions to the new store',
+      reads: [['src/auth/session.rs', 148], ['src/store/mod.rs', 203], ['migrations/0042_sessions.sql', 31]],
+      found: 'Three call sites in `session.rs` still go through the old cache.',
+      file: 'src/auth/session.rs',
+      diff: [[57, ' ', 'pub async fn load(id: SessionId) -> Result<Session> {'], [58, '-', '    let c = cache::global();'], [59, '-', '    c.get(id).await'], [58, '+', '    let s = Store::sessions();'], [59, '+', '    s.get(id).await?.ok_or(Error::Expired)'], [60, ' ', '}']],
+      test: 'cargo test auth', total: 188, secs: '1.74',
+      done: 'Sessions now read and write through `Store`. All 188 auth tests pass.',
+      reply: 'lgtm, merge', ship: ['gh pr merge --squash', '✓ Squashed and merged pull request #215'], after: 'Merged into main.',
+    },
+    {
+      ask: 'bump deps and fix what breaks',
+      reads: [['Cargo.toml', 64], ['src/http/client.rs', 121]],
+      found: 'reqwest 0.13 renamed the timeout builder. Only `client.rs` uses it.',
+      file: 'src/http/client.rs',
+      diff: [[22, ' ', '    let http = reqwest::Client::builder()'], [23, '-', '        .timeout(Duration::from_secs(30))'], [23, '+', '        .read_timeout(Duration::from_secs(30))'], [24, ' ', '        .build()?;']],
+      test: 'cargo test', total: 1204, secs: '8.02',
+      done: 'Bumped 14 crates. One rename in `client.rs`, and all 1204 tests pass.',
+      reply: 'nice. push it', ship: ['git push', '   4f1c2e9..b83d0a7  main -> main'], after: 'Pushed. CI is green.',
+    },
   ];
-  const SPIN = ['▖', '▘', '▝', '▗'];
+  // Spinner frames, verbs and colours match Claude Code's dark theme.
+  const FR = ['·', '✢', '✳', '✶', '✻', '✽'];
+  const FRAMES = FR.concat(FR.slice().reverse());
+  const VERBS = ['Brewing', 'Cogitating', 'Percolating', 'Noodling', 'Pondering', 'Simmering', 'Tinkering', 'Wrangling', 'Clauding', 'Marinating', 'Reticulating', 'Spelunking'];
+  const DONE = ['Baked', 'Brewed', 'Churned', 'Cogitated', 'Cooked', 'Crunched', 'Worked'];
+  const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const md = (s) => esc(s).replace(/`([^`]+)`/g, '<span class="ic">$1</span>');
+  const code = (s) => esc(s)
+    .replace(/\b(pub|async|fn|let|await)\b/g, '<span class="kw">$1</span>')
+    .replace(/\b([A-Z]\w*|[a-z_]\w*(?=\())/g, '<span class="fn">$1</span>');
+  const plural = (n, w) => `<b>${n}</b> ${w}${n === 1 ? '' : 's'}`;
+
   const agentPane = $('.pane-agent');
   function scrollLog() {
     // Scroll by whole lines so the top row is never cut in half.
     const room = agentPane.clientHeight - 8;
     const h = log.getBoundingClientRect().height;
-    const lh = h / Math.max(1, log.children.length);
+    const lh = parseFloat(getComputedStyle(log).lineHeight) || 19;
     const over = h - room;
-    log.style.transform = `translateY(${over > -8 ? -Math.ceil(over / lh) * lh : 8}px)`;
+    const y = over > -8 ? -Math.ceil(over / lh) * lh : 8;
+    log.style.transform = `translateY(${y}px)`;
+    // The welcome banner sticks to the top once the transcript scrolls past it.
+    if (head.parentNode === log) { const top = head.offsetTop + y; head.style.transform = top < 0 ? `translateY(${-top}px)` : ''; }
   }
-  function line(html) {
+
+  // The bottom of Claude Code: spinner, prompt between two rules, footer hint.
+  const live = document.createElement('span');
+  live.className = 'cc-live';
+  live.innerHTML =
+    '<span class="cc-spin"><span class="l gap"> </span><span class="l spin"></span></span>' +
+    '<span class="l gap"> </span><span class="l rule"></span>' +
+    '<span class="l cc-in"><span class="pr">❯</span> <span class="txt"></span><span class="cursor"></span><span class="ph g"></span></span>' +
+    '<span class="l rule"></span><span class="l g cc-foot"></span>';
+  $$('.rule', live).forEach((r) => { r.textContent = '─'.repeat(240); });
+  const spinEl = $('.spin', live), inTxt = $('.txt', live), inPh = $('.ph', live), foot = $('.cc-foot', live);
+
+  // Welcome banner: Clawd beside the version, model and folder, like the CLI.
+  // Clawd is drawn from the CLI's block-character art (one terminal quadrant per
+  // pixel column), with headphones and a keyboard. It types along with whoever
+  // is typing, faster while Claude works, and leans back nodding while it waits.
+  const head = document.createElement('span');
+  head.className = 'cc-head';
+  head.innerHTML =
+    '<svg class="clawd" viewBox="0 0 22 19" shape-rendering="crispEdges" aria-hidden="true"></svg>' +
+    '<span class="l t"><b>Claude Code</b> <span class="g">v2.1.283</span></span>' +
+    '<span class="l t g">Opus 5.5 · Claude Max</span>' +
+    '<span class="l t g">~/api</span><span class="l gap"> </span>';
+  const clawdEl = $('.clawd', head);
+  const CLAWD = { o: '#d77757', e: '#0b0813', b: '#45395c', c: '#1d1629', p: '#da4f9e', k: '#2d2340', y: '#675a7c', Y: '#fff4b0', i: '#d2fbf6', t: '#74dcee', n: '#ff99c4' };
+  const cz = { mode: '', t: 0, timer: 0, arms: [0, 0], last: 1, parts: [] };
+  function clawdDraw(st) {
+    const W = 22, H = 19, px = new Array(W * H).fill('');
+    const put = (x, y, c) => { if (x >= 0 && x < W && y >= 0 && y < H) px[y * W + x] = c; };
+    const rect = (x0, y0, w, h, c) => { for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) put(x, y, c); };
+    // One pixel per terminal quadrant across, three per quadrant down, so the
+    // body keeps the CLI art's proportions and its tall slit eyes.
+    const L = st.lean + 1, Hd = st.lean + st.nod + 1;
+    [6, 8, 13, 15].forEach((x) => rect(x, 15 + L, 1, 3, 'o'));
+    rect(5, 9 + L, 12, 6, 'o');
+    rect(5, 3 + Hd, 12, 6, 'o');
+    const eh = st.blink ? 1 : 3;
+    rect(7, 9 - eh + Hd, 1, eh, 'e'); rect(14, 9 - eh + Hd, 1, eh, 'e');
+    // headphones: band arcing over the top, cups on the sides, a light on the beat
+    rect(7, Hd, 8, 1, 'b'); rect(5, 1 + Hd, 2, 1, 'b'); rect(15, 1 + Hd, 2, 1, 'b'); put(4, 2 + Hd, 'b'); put(17, 2 + Hd, 'b');
+    rect(3, 3 + Hd, 2, 4, 'c'); rect(17, 3 + Hd, 2, 4, 'c');
+    rect(3, 3 + Hd, 1, 4, 'b'); rect(18, 3 + Hd, 1, 4, 'b');
+    if (st.beat) { rect(4, 4 + Hd, 1, 2, 'p'); rect(17, 4 + Hd, 1, 2, 'p'); }
+    // arms: out when resting, down on the keys when typing
+    if (st.type) { rect(3, 11 + 2 * st.arms[0], 2, 3, 'o'); rect(17, 11 + 2 * st.arms[1], 2, 3, 'o'); }
+    else { rect(3, 9 + L, 2, 3, 'o'); rect(17, 9 + L, 2, 3, 'o'); }
+    rect(2, 16, 18, 2, 'k');
+    for (let x = 2; x < 20; x += 2) { put(x + 1, 16, 'y'); put(x, 17, 'y'); }
+    rect(1, 18, 20, 1, 'b');
+    if (st.type && st.arms[0]) { put(3, 16, 'Y'); put(4, 17, 'Y'); }
+    if (st.type && st.arms[1]) { put(18, 16, 'Y'); put(17, 17, 'Y'); }
+    for (const q of cz.parts) {
+      const x = Math.round(q.x), y = Math.round(q.y), c = q.c[Math.min(q.age, q.c.length - 1)];
+      put(x, y, c);
+      if (q.note) { put(x + 1, y - 1, c); put(x + 1, y - 2, c); }
+    }
+    let out = '';
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W;) {
+        const c = px[y * W + x];
+        let n = 1;
+        while (x + n < W && px[y * W + x + n] === c) n++;
+        if (c) out += `<rect x="${x}" y="${y}" width="${n}" height="1" fill="${CLAWD[c]}"/>`;
+        x += n;
+      }
+    }
+    clawdEl.innerHTML = out;
+  }
+  function clawdTick() {
+    if (!heroVisible || document.hidden) return;
+    const t = ++cz.t;
+    cz.parts = cz.parts.filter((q) => { q.age++; q.x += q.dx; q.y += q.dy; return q.age < q.c.length; });
+    if (cz.mode === 'wait') {
+      // Leaning back, nodding on every beat, a note off the cups now and then.
+      const beat = t % 4 === 0;
+      if (t % 8 === 0) { const r = (t / 8) % 2; cz.parts.push({ x: r ? 19 : 1, y: 4, dx: r ? 0.25 : -0.25, dy: -0.5, age: 0, note: true, c: ['n', 'n', 'n', 'p', 'p'] }); }
+      clawdDraw({ lean: -1, nod: beat || t % 4 === 1 ? 1 : 0, beat: beat || t % 4 === 1, blink: t % 26 === 13 });
+      return;
+    }
+    // Typing: a key goes down, comes up, the next one goes down.
+    const down = cz.arms[0] || cz.arms[1];
+    if (down && !(cz.mode === 'fast' && Math.random() < 0.2)) cz.arms = [0, 0];
+    else {
+      const side = Math.random() < 0.75 ? 1 - cz.last : cz.last;
+      cz.last = side; cz.arms = side ? [0, 1] : [1, 0];
+      if (Math.random() < 0.6) cz.parts.push({ x: side ? 19 : 2, y: 15, dx: side ? 1 : -1, dy: -1, age: 0, c: ['i', 't', 'y'] });
+    }
+    const press = cz.arms[0] || cz.arms[1];
+    clawdDraw({ lean: 0, nod: press ? 1 : 0, type: true, arms: cz.arms, beat: press && cz.mode === 'fast', blink: false });
+  }
+  function clawdMode(m) {
+    if (RM) { if (!cz.mode) { cz.mode = m; clawdDraw({ lean: 0, nod: 0, type: true, arms: [0, 0] }); } return; }
+    if (cz.mode === m) return;
+    cz.mode = m; cz.arms = [0, 0];
+    clearInterval(cz.timer);
+    cz.timer = setInterval(clawdTick, m === 'fast' ? 85 : m === 'slow' ? 150 : 125);
+    clawdTick();
+  }
+
+  function line(html, cls) {
     const s = document.createElement('span');
-    s.className = 'l'; s.innerHTML = html || ' ';
-    log.appendChild(s);
-    if (log.children.length > 160 && !heroVisible) while (log.children.length > 40) log.firstChild.remove();
+    s.className = 'l' + (cls ? ' ' + cls : ''); s.innerHTML = html || ' ';
+    log.insertBefore(s, live.parentNode === log ? live : null);
+    if (log.children.length > 160 && !heroVisible) {
+      while (log.children.length > 40) {
+        const f = log.firstChild === head ? head.nextSibling : log.firstChild;
+        if (!f || f === live) break;
+        f.remove();
+      }
+    }
     scrollLog();
     return s;
   }
   const prompt = (cmd) => `<span class="dim">~/api</span> <span class="ok">❯</span> <span class="you">${cmd}</span>`;
-  HISTORY.forEach(line);
+  HISTORY.forEach((h) => line(h));
+
+  let spinT = 0, spinK = 0, spin0 = 0, toks = 0, verb = '';
+  function drawSpin() {
+    const secs = Math.floor((performance.now() - spin0) / 1000);
+    const at = (spinK % (verb.length + 8)) - 3;
+    const v = Array.from(verb).map((c, i) => (i >= at && i < at + 3 ? `<span class="sh">${c}</span>` : c)).join('');
+    const tk = toks < 1000 ? String(toks | 0) : (toks / 1000).toFixed(1) + 'k';
+    spinEl.innerHTML = `<span class="cl">${FRAMES[spinK % FRAMES.length]} ${v}…</span> <span class="g">(${secs}s · ↓ ${tk} tokens)</span>`;
+  }
+  function spinStart() {
+    verb = pick(VERBS); spin0 = performance.now(); spinK = 0; toks = rand(40, 120);
+    live.classList.add('busy');
+    clawdMode('fast');
+    foot.textContent = '  esc to interrupt';
+    drawSpin(); scrollLog();
+    if (RM) return;
+    clearInterval(spinT);
+    spinT = setInterval(() => { spinK++; toks += rand(4, 28); drawSpin(); }, 120);
+  }
+  function spinStop() {
+    clearInterval(spinT);
+    live.classList.remove('busy');
+    clawdMode('wait');
+    foot.textContent = '  ? for shortcuts';
+    scrollLog();
+    return Math.max(1, Math.round((performance.now() - spin0) / 1000));
+  }
+  function setInput(text, placeholder) {
+    inTxt.textContent = text;
+    inPh.textContent = placeholder || '';
+  }
+  async function typeIn(text) {
+    setInput('');
+    clawdMode('slow');
+    for (const ch of text) { inTxt.textContent += ch; await sleep(rand(45, 95)); }
+    clawdMode('wait');
+  }
+  function submit() {
+    const t = inTxt.textContent;
+    setInput('');
+    line('');
+    line(`<span class="pr">❯</span> ${esc(t)}`, 'u w');
+  }
+  function tool(name, arg) {
+    line('');
+    return line(`<span class="dot wip">⏺</span> <b>${name}</b>(${esc(arg)})`, 'w');
+  }
+  const ok = (ln) => $('.dot', ln).classList.replace('wip', 'done');
+  const res = (html) => line(`<span class="g">  ⎿  </span>${html}`);
+  const say = (text) => { line(''); return line(`<span class="dot">⏺</span> ${md(text)}`, 'w'); };
+  function diff(t) {
+    const add = t.diff.filter((d) => d[1] === '+').length, del = t.diff.filter((d) => d[1] === '-').length;
+    const sum = [add && 'Added ' + plural(add, 'line'), del && (add ? 'removed ' : 'Removed ') + plural(del, 'line')].filter(Boolean).join(', ');
+    res(sum);
+    for (const [n, m, src] of t.diff) {
+      const k = m === '+' ? 'plus' : m === '-' ? 'minus' : 'ctx';
+      line(`     <span class="dr ${k}"><span class="n">${String(n).padStart(3)} ${m}</span>${code(src)}</span>`);
+    }
+  }
+  function header() {
+    line('');
+    log.insertBefore(head, null);
+    log.appendChild(live);
+    clawdMode('wait');
+    foot.textContent = '  ? for shortcuts';
+    setInput('', 'Try "fix lint errors"');
+    scrollLog();
+  }
 
   async function review(t) {
     if (HERO.user) return;
@@ -297,15 +510,24 @@
     HERO.stamp('focus-out · 8 fps');
     pane.classList.add('away');
     reel.pause();
-    const ln = line(`<span class="ok">❯</span> <span class="you"></span><span class="cursor"></span>`);
-    const you = $('.you', ln);
     await sleep(2200);
-    for (const ch of t.reply) { you.textContent += ch; await sleep(rand(70, 130)); }
+    await typeIn(t.reply);
     HERO.title();
-    if (HERO.user) { $('.cursor', ln).remove(); return; }
+    if (HERO.user) { setInput(''); return; }
     await sleep(420);
-    $('.cursor', ln).remove();
-    line(`<span class="ok">●</span> ${t.after}`);
+    submit();
+    spinStart();
+    await sleep(900);
+    const b = tool('Bash', t.ship[0]);
+    const r = res('<span class="g">Running…</span>');
+    await sleep(1300);
+    ok(b);
+    r.innerHTML = `<span class="g">  ⎿  </span>${esc(t.ship[1])}`;
+    await sleep(500);
+    say(t.after);
+    const s = spinStop();
+    line('');
+    line(`<span class="g">✻ ${pick(DONE)} for ${s}s</span>`);
     await sleep(2400);
     if (HERO.user) return;
     HERO.focus('trex');
@@ -313,30 +535,50 @@
     if (heroVisible) play(reel);
   }
 
+  async function work(t) {
+    submit();
+    spinStart();
+    await sleep(1400);
+    for (const [f, k] of t.reads) {
+      const r = tool('Read', f);
+      await sleep(rand(380, 620));
+      ok(r); res(`Read ${plural(k, 'line')}`);
+      await sleep(rand(200, 400));
+    }
+    await sleep(900);
+    say(t.found);
+    await sleep(1300);
+    const u = tool('Update', t.file);
+    await sleep(900);
+    ok(u); diff(t);
+    await sleep(1200);
+    const b = tool('Bash', t.test);
+    const r = res('<span class="g">Running…</span>');
+    await sleep(rand(1800, 2600));
+    ok(b);
+    r.innerHTML = `<span class="g">  ⎿  </span>running ${t.total} tests`;
+    line(`     test result: <span class="pass">ok</span>. ${t.total} passed; 0 failed; finished in ${t.secs}s`);
+    await sleep(800);
+    say(t.done);
+    const s = spinStop();
+    line('');
+    line(`<span class="g">✻ ${pick(DONE)} for ${s}s</span>`);
+  }
+
   async function agentLoop() {
+    const sh = line(prompt('') + '<span class="cursor"></span>');
+    await sleep(500);
+    for (const ch of 'claude') { $('.you', sh).textContent += ch; await sleep(rand(60, 110)); }
+    await sleep(300);
+    $('.cursor', sh).remove();
+    header();
     let n = 0;
     for (;;) {
       const t = TASKS[n++ % TASKS.length];
-      if (n > 1) line('');
-      line(prompt(`agent "${t.ask}"`));
-      await sleep(800);
-      for (const f of t.read) { line(`<span class="tool">●</span> Read <span class="dim">${f}</span>`); await sleep(rand(380, 620)); }
-      line(`<span class="warn">●</span> Found it: ${t.found}`); await sleep(900);
-      line(`<span class="tool">●</span> Edit <span class="dim">${t.edit[0]}</span> <span class="add">+${t.edit[1]}</span> <span class="del">-${t.edit[2]}</span>`); await sleep(800);
-      line(`<span class="tool">●</span> Bash <span class="dim">${t.test}</span>`);
-      const bar = line('');
-      const W = 16;
-      let done = 0, k = 0;
-      const start = performance.now();
-      while (done < t.total) {
-        done = Math.min(t.total, done + Math.ceil(rand(0.05, 0.11) * t.total));
-        const f = Math.round((done / t.total) * W);
-        bar.innerHTML = `  <span class="bar">${'█'.repeat(f)}</span><span class="dim">${'░'.repeat(W - f)}</span> ${done}/${t.total} <span class="dim">${SPIN[k++ % 4]}</span>`;
-        await sleep(rand(180, 320));
-      }
-      bar.innerHTML = `  <span class="ok">✓ ${t.total} passed</span> <span class="dim">in ${((performance.now() - start) / 1000).toFixed(1)}s</span>`;
-      await sleep(500);
-      line(`<span class="ok">●</span> <span class="gold">Done. Waiting on your review.</span>`);
+      await sleep(n === 1 ? 900 : 300);
+      await typeIn(t.ask);
+      await sleep(350);
+      await work(t);
       await review(t);
       await sleep(9000);
     }
@@ -350,9 +592,18 @@
   HERO.boot = bootReel;
   async function terminal() {
     if (RM) {
+      const t = TASKS[0];
       typed.textContent = 'trex';
-      line(prompt(`agent "${TASKS[0].ask}"`));
-      line(`<span class="tool">●</span> Bash <span class="dim">${TASKS[0].test}</span>`);
+      line(prompt('claude'));
+      header();
+      setInput(t.ask);
+      submit();
+      tool('Read', t.reads[1][0]).querySelector('.dot').classList.replace('wip', 'done');
+      res(`Read ${plural(t.reads[1][1], 'line')}`);
+      say(t.found);
+      tool('Bash', t.test);
+      res('<span class="g">Running…</span>');
+      spinStart();
       bootReel();
       return;
     }
@@ -399,7 +650,7 @@
   const rv = new IntersectionObserver((es) => {
     for (const e of es) if (e.isIntersecting) { e.target.classList.add('in', 'seen'); rv.unobserve(e.target); }
   }, { threshold: 0, rootMargin: '0px 0px -10% 0px' });
-  $$('[data-reveal], .step').forEach((el) => rv.observe(el));
+  $$('[data-reveal]').forEach((el) => rv.observe(el));
 
   // ---------- Lazy videos ----------
   const lazyV = new IntersectionObserver((es) => {
@@ -449,85 +700,82 @@
     PX.renderAll(track);
   })();
 
-  // ---------- Run: headline kill counter ----------
-  (function killboard() {
-    const el = $('.kb-n');
-    const TO = 7800;
-    const set = (n) => { el.textContent = n.toLocaleString('en-US'); delete el.dataset.pxDone; PX.render(el); };
-    set(RM ? TO : 1);
-    if (RM) return;
-    const io = new IntersectionObserver(([e]) => {
-      if (!e.isIntersecting) return;
-      io.disconnect();
-      const t0 = performance.now();
-      let lastN = -1;
-      const step = (t) => {
-        const k = clamp((t - t0) / 1600, 0, 1);
-        const n = Math.max(1, Math.round(TO * (1 - Math.pow(1 - k, 3))));
-        if (n !== lastN) { set(n); lastN = n; }
-        if (k < 1) setTimeout(() => requestAnimationFrame(step), 40);
-      };
-      requestAnimationFrame(step);
-    }, { threshold: 0.6 });
-    io.observe(el);
-  })();
-
-  // ---------- Run player ----------
+  // ---------- Run player: one run, told by floor and boss ----------
   (function run() {
-    const CH = [
-      { id: 'early', t: 23, name: 'First picks', icon: 'rex', d: 'Empty arena, first level-up. Bone Storm, Cold Snap or Iron Jaw?' },
-      { id: 'boss-mire-queen', t: 185, name: 'Mire Queen', icon: 'mire-queen', boss: 1, d: 'First boss. A crowned slime that rings the arena in pink globs.' },
-      { id: 'boss-colossus', t: 368, name: 'Bone Colossus', icon: 'colossus', boss: 1, d: 'A triceratops skeleton. Explosion rings, cyan spray, no room to breathe.' },
-      { id: 'lightning-build', t: 600, name: 'Lightning build', icon: 'ptera', d: 'Bone Dunes on a two-heart bird. Meteors overhead, chain lightning below.' },
-      { id: 'boss-sandmaw', t: 745, name: 'Sandmaw', icon: 'sandmaw', boss: 1, d: 'A level-up mid-fight, then the floor rolls over into Spore Marsh.' },
-      { id: 'late-chaos', t: 870, name: 'LV 41 swarm', icon: 'rex', d: 'Hundreds on screen, damage numbers everywhere, 7,800 kills by 14:39. The rex is in there somewhere.' },
+    const FLOORS = [
+      ['Tar Pits', 'tar'], ['Fern Hollow', 'fern'], ['Ember Flats', 'ember'],
+      ['Frost Caves', 'frost'], ['Bone Dunes', 'dunes'], ['Spore Marsh', 'spore'],
     ];
-    const list = $('.chapters');
+    const BOSSES = [
+      [180, 'mire-queen', 'Mire Queen'], [360, 'colossus', 'Bone Colossus'], [540, 'wraith', 'Storm Wraith'],
+      [720, 'sandmaw', 'Sandmaw'], [900, 'hive-eye', 'Hive Eye'],
+    ];
+    const CH = [
+      { id: 'early', t: 23, name: 'First picks' },
+      { id: 'boss-mire-queen', t: 185, name: 'Mire Queen' },
+      { id: 'boss-colossus', t: 368, name: 'Bone Colossus' },
+      { id: 'lightning-build', t: 600, name: 'Lightning build' },
+      { id: 'boss-sandmaw', t: 745, name: 'Sandmaw' },
+      { id: 'late-chaos', t: 870, name: 'The swarm' },
+    ];
+    const floorAt = (t) => FLOORS[Math.min(FLOORS.length - 1, Math.floor(t / 150))];
+
     const marks = $('.track-marks');
     const video = $('.run-video');
     const poster = $('.run-poster');
     const vid = $('.run .vid');
     const label = $('.run-label');
-    const count = $('.run-count');
+    const where = $('.run-where');
     const fill = $('.track-fill');
     let cur = 0, visible = false, raf = 0;
+
+    const floors = $('.route-floors');
+    FLOORS.forEach(([n, k]) => {
+      const f = document.createElement('span');
+      f.className = 'seg fl-' + k; f.textContent = n;
+      floors.appendChild(f);
+    });
+    const bossRow = $('.route-bosses');
+    const pins = BOSSES.map(([t, id, n]) => {
+      const p = document.createElement('span');
+      p.className = 'pin'; p.style.left = (t / 900 * 100) + '%'; p.title = n;
+      p.appendChild(sprite(id, 2, { fd: 260 }));
+      bossRow.appendChild(p);
+      return p;
+    });
+
     CH.forEach((c, i) => {
-      const li = document.createElement('li');
-      const b = document.createElement('button');
-      b.type = 'button'; b.className = 'chapter';
-      b.innerHTML = `<span class="ic"></span><span class="tx"><span class="t">${mmss(c.t)}</span><span class="n">${c.name}</span><span class="d"><span>${c.d}</span></span></span>`;
-      $('.ic', b).appendChild(sprite(c.icon, 2, { fd: 220 }));
-      b.addEventListener('click', () => go(i, true));
-      li.appendChild(b); list.appendChild(li);
       const m = document.createElement('button');
-      m.type = 'button'; m.className = 'track-mark' + (c.boss ? ' is-boss' : '');
+      m.type = 'button'; m.className = 'track-mark';
       m.style.left = (c.t / 900 * 100) + '%';
-      m.tabIndex = -1;
-      m.setAttribute('aria-label', c.name);
+      m.setAttribute('aria-label', `${mmss(c.t)} ${c.name}`);
       m.addEventListener('click', () => go(i, true));
       marks.appendChild(m);
     });
-    const btns = $$('.chapter', list);
     const mks = $$('.track-mark', marks);
+    const fls = $$('.seg', floors);
+    function mark(t) {
+      const f = Math.min(FLOORS.length - 1, Math.floor(t / 150));
+      fls.forEach((el, k) => { el.classList.toggle('past', k < f); el.classList.toggle('on', k === f); });
+      pins.forEach((p, k) => p.classList.toggle('past', BOSSES[k][0] <= t + 5));
+      fill.style.transform = `scaleX(${clamp(t / 900, 0, 1)})`;
+    }
     function go(i, user) {
       cur = (i + CH.length) % CH.length;
       const c = CH[cur];
-      btns.forEach((b, k) => { b.classList.toggle('on', k === cur); b.setAttribute('aria-current', k === cur ? 'true' : 'false'); });
-      mks.forEach((m, k) => m.classList.toggle('on', k === cur));
+      mks.forEach((m, k) => { m.classList.toggle('on', k === cur); m.setAttribute('aria-current', k === cur ? 'true' : 'false'); });
       label.textContent = `${mmss(c.t)} · ${c.name}`;
-      count.textContent = `${cur + 1} / ${CH.length}`;
+      where.textContent = floorAt(c.t)[0];
       if (!RM) { vid.classList.remove('swapping'); void vid.offsetWidth; vid.classList.add('swapping'); }
       poster.src = `assets/video/${c.id}.png`;
       video.poster = `assets/video/${c.id}.png`;
-      fill.style.transform = `scaleX(${c.t / 900})`;
+      mark(c.t);
       video.src = `assets/video/${c.id}.mp4`;
       if (visible && (!RM || user)) play(video);
-      if (user && btns[cur] && innerWidth <= 1100) btns[cur].scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: RM ? 'auto' : 'smooth' });
     }
     video.addEventListener('ended', () => go(cur + 1));
     function loop() {
-      const c = CH[cur];
-      if (!video.paused) fill.style.transform = `scaleX(${clamp((c.t + video.currentTime) / 900, 0, 1)})`;
+      if (!video.paused) mark(CH[cur].t + video.currentTime);
       raf = visible ? requestAnimationFrame(loop) : 0;
     }
     let started = false;
@@ -540,122 +788,14 @@
     }, { rootMargin: '100px 0px' }).observe(vid);
     if (RM) vid.addEventListener('click', () => { if (video.paused) play(video); else video.pause(); });
 
-    const runEl = $('.run');
-    const side = matchMedia('(min-width: 1101px)');
+    // The player takes the full column at a whole-pixel scale; the rest of the section lines up to it.
+    const sec = $('#run');
+    const wrap = $('.wrap', sec);
     layouts.push(() => {
       const pad = parseFloat(getComputedStyle(vid.parentElement).paddingLeft) * 2;
-      const w = runEl.clientWidth - (side.matches ? 300 + 32 : 0) - pad;
-      setSize(vid, fit(w, side.matches ? innerHeight - 200 : 4096));
-    });
-  })();
-
-  // ---------- Pipeline steps ----------
-  (function pipe() {
-    const pvs = $$('#pipe-screen .pv');
-    const steps = $$('.step');
-    steps.forEach((s, i) => {
-      const box = $('.inline-vis', s);
-      const wrap = document.createElement('div');
-      wrap.className = 'pipe-screen px-frame';
-      const clone = pvs[i].cloneNode(true);
-      clone.classList.add('on');
-      wrap.appendChild(clone);
-      box.appendChild(wrap);
-    });
-
-    // Step 01 zooms into the framebuffer in whole-pixel steps, like a paint program.
-    const img = new Image();
-    img.src = $('#pipe-screen canvas.zoom').dataset.src;
-    const zooms = $$('canvas.zoom').map((cv) => ({ cv, z: 1, t: 0 }));
-    function drawZoom(o) {
-      const { cv } = o;
-      if (!img.complete || !cv.width) return;
-      const ctx = cv.getContext('2d');
-      ctx.imageSmoothingEnabled = false;
-      const b = Math.round(cv.width / 256);
-      const s = b * o.z;
-      const fx0 = +cv.dataset.fx, fy0 = +cv.dataset.fy;
-      const vw = cv.width / s, vh = cv.height / s;
-      const sx = Math.round(clamp(fx0 - vw / 2, 0, 256 - vw));
-      const sy = Math.round(clamp(fy0 - vh / 2, 0, 144 - vh));
-      ctx.fillStyle = '#0b0813'; ctx.fillRect(0, 0, cv.width, cv.height);
-      ctx.drawImage(img, 0, 0, 256, 144, -sx * s, -sy * s, 256 * s, 144 * s);
-      if (s >= 8) {
-        ctx.fillStyle = 'rgba(15, 11, 24, 0.55)';
-        for (let x = 0; x <= cv.width; x += s) ctx.fillRect(x, 0, 1, cv.height);
-        for (let y = 0; y <= cv.height; y += s) ctx.fillRect(0, y, cv.width, 1);
-      }
-    }
-    function sizeZoom(o) {
-      const r = o.cv.parentElement.parentElement.getBoundingClientRect();
-      const d = window.devicePixelRatio || 1;
-      o.cv.width = Math.round(r.width * d); o.cv.height = Math.round(r.height * d);
-      drawZoom(o);
-    }
-    function runZoom(o) {
-      if (RM) { o.z = 4; drawZoom(o); return; }
-      clearInterval(o.t);
-      o.z = 1; drawZoom(o);
-      const seq = [1, 2, 3, 4, 6];
-      let i = 0;
-      o.t = setInterval(() => { o.z = seq[++i]; drawZoom(o); if (i >= seq.length - 1) clearInterval(o.t); }, 480);
-    }
-    img.onload = () => zooms.forEach(sizeZoom);
-
-    function typeOut(root) {
-      if (RM || !root) return;
-      const nodes = [];
-      const walk = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-      while (walk.nextNode()) nodes.push([walk.currentNode, walk.currentNode.textContent]);
-      nodes.forEach(([n]) => { n.textContent = ''; });
-      let i = 0, j = 0;
-      clearInterval(root._t);
-      root._t = setInterval(() => {
-        for (let k = 0; k < 4 && i < nodes.length; k++) {
-          const [n, full] = nodes[i];
-          n.textContent = full.slice(0, ++j);
-          if (j >= full.length) { i++; j = 0; }
-        }
-        if (i >= nodes.length) clearInterval(root._t);
-      }, 16);
-    }
-    const sizeFlows = () => $$('.flow i').forEach((i) => i.style.setProperty('--fw', i.offsetWidth + 'px'));
-    let active = -1;
-    const io = new IntersectionObserver((es) => {
-      for (const e of es) {
-        if (!e.isIntersecting) continue;
-        const i = +e.target.dataset.step;
-        e.target.classList.add('seen');
-        steps.forEach((s, k) => s.classList.toggle('on', k === i));
-        pvs.forEach((p, k) => p.classList.toggle('on', k === i));
-        if (i !== active) {
-          active = i;
-          typeOut($('.esc', pvs[i]));
-          sizeFlows();
-          if (i === 0) runZoom(zooms[0]);
-        }
-      }
-    }, { rootMargin: '-45% 0px -45% 0px' });
-    steps.forEach((s) => io.observe(s));
-    const io2 = new IntersectionObserver((es) => {
-      for (const e of es) if (e.isIntersecting) {
-        e.target.classList.add('seen');
-        const z = zooms.find((o) => e.target.contains(o.cv));
-        if (z && narrow.matches && !z.ran) { z.ran = true; runZoom(z); }
-      }
-    }, { threshold: 0.3 });
-    steps.forEach((s) => io2.observe(s));
-
-    const pipeEl = $('.pipe');
-    const main = $('#pipe-screen');
-    layouts.push(() => {
-      if (!narrow.matches) setSize(main, fit(pipeEl.clientWidth - 380 - 56 - 16, innerHeight - 220));
-      $$('.inline-vis .pipe-screen').forEach((w) => {
-        const f = fit(w.parentElement.clientWidth - 16, 4096);
-        if ($('.pv-code', w)) { w.style.width = f.w + 'px'; w.style.height = ''; } else setSize(w, f);
-      });
-      zooms.forEach(sizeZoom);
-      sizeFlows();
+      const s = fit(wrap.clientWidth - pad, Math.max(144, innerHeight - 190));
+      setSize(vid, s);
+      sec.style.setProperty('--run-w', (s.w + pad) + 'px');
     });
   })();
 
