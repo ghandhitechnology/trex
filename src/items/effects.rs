@@ -121,14 +121,20 @@ pub fn run(w: &mut World, action: &Action, ev: &GameEvent, owner: Owner) {
         }
         Action::Explode { radius, damage: ratio } => {
             weapons::blast(w, ev.pos, radius * area, damage * ratio, Source::Explode, depth, None);
+            // The hero's own blasts (headbutts, hurt blasts) flash at its head.
+            if ev.target.is_none() && ev.pos.dist_sq(w.player.pos) < 16.0 * 16.0 {
+                w.fx.impact();
+            }
         }
         Action::Nova { count, damage: ratio } => {
             let spark = bank().id("spark").expect("sprite `spark`");
+            let tint = bank().get(spark).tint();
             let base = w.rng.angle();
             for k in 0..count {
-                let a = base + k as f32 / count.max(1) as f32 * std::f32::consts::TAU;
-                player::spawn_shot(w, owner, ev.pos, Vec2::from_angle(a), ratio, depth, spark);
+                let dir = Vec2::from_angle(base + k as f32 / count.max(1) as f32 * std::f32::consts::TAU);
+                player::spawn_shot(w, owner, ev.pos, dir, ratio, depth, spark);
                 tag_last(w, Source::Nova);
+                w.fx.streak(ev.pos, dir, tint);
             }
         }
         Action::Chain { jumps, range, damage: ratio } => {
@@ -171,6 +177,9 @@ pub fn run(w: &mut World, action: &Action, ev: &GameEvent, owner: Owner) {
             }
             let color = if force < 0.0 { palette::GRAPE } else { palette::ICE };
             w.fx.ring(ev.pos, r, color);
+            if force > 0.0 {
+                w.fx.dust_ring(ev.pos + Vec2::new(0.0, 6.0), r);
+            }
         }
         Action::Heal { amount } => w.heal(amount),
         Action::Strike { count, radius, damage: ratio } => {

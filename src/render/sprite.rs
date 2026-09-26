@@ -5,7 +5,7 @@
 use std::collections::HashMap;
 use std::sync::OnceLock;
 
-use super::palette::{self, CLEAR};
+use super::palette::{self, CLEAR, Color};
 
 /// A sprite as written in source.
 pub struct SpriteDef {
@@ -39,6 +39,13 @@ impl Sprite {
 
     pub fn first(&self) -> &Frame {
         &self.frames[0]
+    }
+
+    /// The two main colors, for tinting beams, auras and flashes.
+    pub fn tint(&self) -> (Color, Color) {
+        let first = self.colors.first().copied().map_or(palette::BONE, palette::color);
+        let second = self.colors.get(1).copied().map_or(first, palette::color);
+        (first, second)
     }
 }
 

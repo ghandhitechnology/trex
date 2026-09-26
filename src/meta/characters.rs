@@ -30,6 +30,9 @@ pub struct CharacterDef {
     /// from the sprite center with the hero facing right.
     #[serde(default)]
     pub muzzle: (f32, f32),
+    /// Hovers instead of walking: bobs over its shadow and kicks no dust.
+    #[serde(default)]
+    pub flies: bool,
     /// Meta currency cost to unlock. 0 means available from the start.
     #[serde(default)]
     pub unlock: u32,

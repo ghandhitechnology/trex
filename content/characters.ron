@@ -24,6 +24,7 @@
     (
         id: "ptera",
         name: "Ptera",
+        flies: true,
         desc: "Fast and fragile. Twin feathers. Dashes fire a volley.",
         sprite: "ptera",
         idle: "ptera_idle",

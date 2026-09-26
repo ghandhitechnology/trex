@@ -1,6 +1,8 @@
 //! Visual-only effects: particles, damage numbers, rings, lightning, afterimages,
-//! screen shake requests and hit stop.
+//! muzzle puffs, screen shake requests and hit stop.
 //! Uses its own RNG so gameplay stays identical with or without visuals.
+
+use std::f32::consts::TAU;
 
 use super::camera::Camera;
 use super::canvas::{Blit, Canvas};
@@ -59,6 +61,39 @@ pub struct Ghost {
     pub life: f32,
 }
 
+/// A muzzle flash: a bright blob that shrinks away over a few frames.
+pub struct Puff {
+    pub pos: Vec2,
+    /// Drift, so a puff at a moving hero's mouth keeps up with it.
+    pub vel: Vec2,
+    pub life: f32,
+    pub max: f32,
+    pub color: Color,
+    /// Radius at its biggest, in pixels.
+    pub size: u8,
+}
+
+/// Hero details tracked across ticks: stride contacts, turns, dash edges,
+/// and the timers the HUD and hero drawing read.
+#[derive(Default)]
+pub struct HeroFx {
+    /// Stride count at the last tick, for footstep dust on foot contacts.
+    pub stride: i32,
+    pub dashing: bool,
+    /// The dash cooldown was running last tick.
+    pub cooling: bool,
+    /// The current turnaround already skidded.
+    pub skid: bool,
+    /// Seconds until the next sweat drop while low on HP.
+    pub sweat: f32,
+    /// Seconds left of the dash-ready glint.
+    pub ready: f32,
+    /// Seconds left of the impact star at the hero's head.
+    pub impact: f32,
+    /// Seconds left of the XP bar pulse.
+    pub xp: f32,
+}
+
 pub struct Fx {
     /// When false (headless sim) nothing is spawned.
     pub enabled: bool,
@@ -68,6 +103,8 @@ pub struct Fx {
     pub rings: Vec<Ring>,
     pub bolts: Vec<Bolt>,
     pub ghosts: Vec<Ghost>,
+    pub puffs: Vec<Puff>,
+    pub hero: HeroFx,
     /// Screen shake requested this tick, consumed by the camera.
     pub kick: f32,
     /// Red hurt flash, seconds left.
@@ -82,6 +119,15 @@ const MAX_PARTICLES: usize = 1500;
 const MAX_TEXTS: usize = 24;
 const TEXT_LIFE: f32 = 0.7;
 const GHOST_LIFE: f32 = 0.22;
+/// Seconds the dash-ready glint and HUD pulse last.
+pub const READY_TIME: f32 = 0.3;
+/// Seconds the impact star at the hero's head lasts.
+pub const IMPACT_TIME: f32 = 0.16;
+/// Seconds the XP bar stays bright after a gem lands.
+pub const XP_PULSE: f32 = 0.15;
+/// Dust colors; it cools to `DUST_FADE` as it settles.
+const DUST: [Color; 2] = [palette::FOG, palette::HAZE];
+const DUST_FADE: Color = palette::MAUVE;
 /// Damage numbers landing this close to a fresh one merge into it.
 const MERGE_DIST: f32 = 14.0;
 const MERGE_AGE: f32 = 0.3;
@@ -96,6 +142,8 @@ impl Fx {
             rings: Vec::new(),
             bolts: Vec::new(),
             ghosts: Vec::new(),
+            puffs: Vec::new(),
+            hero: HeroFx::default(),
             kick: 0.0,
             flash: 0.0,
             glare: 0.0,
@@ -155,6 +203,165 @@ impl Fx {
             grav: 0.0,
             streak: false,
         });
+    }
+
+    /// Muzzle flash where a shot leaves the hero: a puff that shrinks over a
+    /// few frames and a spit of particles along `aim`, in the shot's colors.
+    /// `vel` is the hero's, so the flash stays at its mouth.
+    pub fn muzzle(&mut self, pos: Vec2, aim: Vec2, vel: Vec2, (head, tail): (Color, Color)) {
+        if !self.enabled {
+            return;
+        }
+        self.puffs.push(Puff { pos, vel, life: 0.06, max: 0.06, color: head, size: 2 });
+        for k in 0..3 {
+            let v = aim.rotate(self.rng.range(-0.5, 0.5)) * self.rng.range(35.0, 75.0);
+            let life = self.rng.range(0.1, 0.22);
+            self.push(Particle {
+                pos: pos + aim,
+                vel: vel + v,
+                life,
+                max: life,
+                color: if k == 0 { head } else { tail },
+                fade: tail.mix(palette::INK, 100),
+                size: 1,
+                drag: 8.0,
+                grav: 0.0,
+                streak: false,
+            });
+        }
+    }
+
+    /// A short streak leaving `pos` along `dir`: one shot of a radial volley.
+    pub fn streak(&mut self, pos: Vec2, dir: Vec2, (head, tail): (Color, Color)) {
+        let life = 0.1;
+        self.push(Particle {
+            pos: pos + dir * 5.0,
+            vel: dir * 150.0,
+            life,
+            max: life,
+            color: head,
+            fade: tail,
+            size: 1,
+            drag: 12.0,
+            grav: 0.0,
+            streak: true,
+        });
+    }
+
+    /// Dust kicked up at `pos`, thrown along `dir` within `spread` radians.
+    pub fn dust(&mut self, pos: Vec2, dir: Vec2, spread: f32, n: usize, speed: f32) {
+        if !self.enabled {
+            return;
+        }
+        for _ in 0..n {
+            let v = dir.rotate(self.rng.range(-spread, spread)) * speed * self.rng.range(0.4, 1.0);
+            let lift = self.rng.range(3.0, 10.0);
+            let x = self.rng.range(-1.0, 1.0);
+            let life = self.rng.range(0.22, 0.4);
+            let color = DUST[self.rng.below(DUST.len())];
+            self.push(Particle {
+                pos: pos + Vec2::new(x, 0.0),
+                vel: v - Vec2::new(0.0, lift),
+                life,
+                max: life,
+                color,
+                fade: DUST_FADE,
+                size: 1,
+                drag: 6.0,
+                grav: 0.0,
+                streak: false,
+            });
+        }
+    }
+
+    /// A ring of dust racing out along the ground from `pos` (feet), flattened
+    /// like the shadows, to about `radius`.
+    pub fn dust_ring(&mut self, pos: Vec2, radius: f32) {
+        if !self.enabled {
+            return;
+        }
+        let n = ((radius / 2.0) as usize).clamp(12, 32);
+        let base = self.rng.angle();
+        for k in 0..n {
+            let a = Vec2::from_angle(base + k as f32 / n as f32 * TAU + self.rng.range(-0.1, 0.1));
+            let dir = Vec2::new(a.x, a.y * 0.5);
+            let v = radius * 7.0 * self.rng.range(0.85, 1.0);
+            let life = self.rng.range(0.32, 0.45);
+            self.push(Particle {
+                pos: pos + dir * 3.0,
+                vel: dir * v,
+                life,
+                max: life,
+                color: DUST[k % DUST.len()],
+                fade: DUST_FADE,
+                size: 1,
+                drag: 7.0,
+                grav: 0.0,
+                streak: false,
+            });
+        }
+    }
+
+    /// Speed lines trailing a dash start: the body leaves them behind.
+    pub fn speed_lines(&mut self, pos: Vec2, dir: Vec2, speed: f32) {
+        if !self.enabled {
+            return;
+        }
+        for off in [-4.0, 1.0, 5.0] {
+            let side = off + self.rng.range(-1.0, 1.0);
+            let v = speed * self.rng.range(0.7, 0.9);
+            let life = self.rng.range(0.1, 0.14);
+            self.push(Particle {
+                pos: pos + dir.perp() * side - dir * 3.0,
+                vel: dir * v,
+                life,
+                max: life,
+                color: palette::BONE,
+                fade: palette::HAZE,
+                size: 1,
+                drag: 10.0,
+                grav: 0.0,
+                streak: true,
+            });
+        }
+    }
+
+    /// A star at the hero's head for a moment: its own blasts landing.
+    pub fn impact(&mut self) {
+        if self.enabled {
+            self.hero.impact = IMPACT_TIME;
+        }
+    }
+
+    /// A sweat drop flicked off the head of a hero moving at `vel`, arcing
+    /// to the ground: two pixels, a highlight over its body.
+    pub fn sweat(&mut self, pos: Vec2, vel: Vec2, facing: f32) {
+        if !self.enabled {
+            return;
+        }
+        let vel = vel + Vec2::new(-facing * self.rng.range(10.0, 18.0), -self.rng.range(22.0, 32.0));
+        for (dy, color, fade) in [(0.0, palette::ICE, palette::CYAN), (1.0, palette::CYAN, palette::SKY)] {
+            let life = 0.5;
+            self.push(Particle {
+                pos: pos + Vec2::new(0.0, dy),
+                vel,
+                life,
+                max: life,
+                color,
+                fade,
+                size: 1,
+                drag: 0.5,
+                grav: 200.0,
+                streak: false,
+            });
+        }
+    }
+
+    /// Brighten the XP bar for a moment.
+    pub fn xp_pulse(&mut self) {
+        if self.enabled {
+            self.hero.xp = XP_PULSE;
+        }
     }
 
     /// Debris that arcs and falls (death bursts).
@@ -334,6 +541,14 @@ impl Fx {
             g.life -= dt;
         }
         self.ghosts.retain(|g| g.life > 0.0);
+        for f in &mut self.puffs {
+            f.pos += f.vel * dt;
+            f.life -= dt;
+        }
+        self.puffs.retain(|f| f.life > 0.0);
+        self.hero.ready = (self.hero.ready - dt).max(0.0);
+        self.hero.impact = (self.hero.impact - dt).max(0.0);
+        self.hero.xp = (self.hero.xp - dt).max(0.0);
         self.flash = (self.flash - dt).max(0.0);
         self.glare = (self.glare - dt).max(0.0);
     }
@@ -408,6 +623,16 @@ impl Fx {
                 cv.put(x, y, c);
             }
         }
+        for f in &self.puffs {
+            let (x, y) = cam.to_screen(f.pos);
+            let r = (f32::from(f.size) * f.life / f.max).ceil() as i32;
+            if r >= 2 {
+                cv.fill_circle(x, y, r, f.color);
+                star(cv, x, y, r - 1, palette::CREAM, palette::CREAM);
+            } else {
+                star(cv, x, y, r, palette::CREAM, f.color);
+            }
+        }
         for t in &self.texts {
             let (x, y) = cam.to_screen(t.pos);
             // Pop up on spawn and on every merge, then cool down before vanishing.
@@ -434,4 +659,20 @@ impl Fx {
             }
         }
     }
+}
+
+/// A four-point sparkle with arms `len` long, `core` at its heart. Long
+/// arms get a diagonal pixel in each corner.
+pub fn star(cv: &mut Canvas, x: i32, y: i32, len: i32, core: Color, arm: Color) {
+    for d in 1..=len {
+        for (dx, dy) in [(d, 0), (-d, 0), (0, d), (0, -d)] {
+            cv.put(x + dx, y + dy, arm);
+        }
+    }
+    if len >= 3 {
+        for (dx, dy) in [(1, 1), (-1, 1), (1, -1), (-1, -1)] {
+            cv.put(x + dx, y + dy, arm);
+        }
+    }
+    cv.put(x, y, core);
 }

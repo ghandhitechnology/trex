@@ -3,6 +3,7 @@
 
 use super::arena::{Floor, Floors, PAD};
 use super::canvas::{Blit, Canvas};
+use super::fx::{self, IMPACT_TIME, READY_TIME};
 use super::light;
 use super::noise;
 use super::palette::{self, Color};
@@ -86,18 +87,26 @@ pub fn draw_world(cv: &mut Canvas, w: &World, floors: Option<&Floors>, death: Op
         cv.blend_ellipse(x, y + f.h / 2 - 2, (f.w / 2 - 2).max(2), 2, palette::INK, 110);
         bodies.push((y, i));
     }
+    let ch = &content.characters[w.character];
     let (px, py) = cam.to_screen(w.player.pos);
-    cv.blend_ellipse(px, py + 6, 5, 2, palette::INK, 120);
+    if ch.flies {
+        // A flyer's shadow sits lower and smaller, so it reads as off the ground.
+        cv.blend_ellipse(px, py + 8, 4, 1, palette::INK, 110);
+    } else {
+        cv.blend_ellipse(px, py + 6, 5, 2, palette::INK, 120);
+    }
     bodies.sort_by_key(|b| b.0);
 
     w.fx.draw_under(cv, cam);
-    let ch = &content.characters[w.character];
     for &(_, i) in &bodies {
         let (x, y) = cam.to_screen(w.enemies[i].pos);
         enemies::draw::body(cv, w, i, x, y, death.is_some());
     }
     // The player always draws over the crowd so it never gets lost in it.
     player(cv, w, ch, (px, py), death);
+    if death.is_none() {
+        marks(cv, w, ch, (px, py));
+    }
 
     for s in &w.shots {
         let (x, y) = cam.to_screen(s.pos);
@@ -191,9 +200,39 @@ fn player(cv: &mut Canvas, w: &World, ch: &CharacterDef, (px, py): (i32, i32), d
         _ => s.first(),
     };
     let flash = (p.hurt > 0.0).then_some(palette::BONE);
-    // Running bob: one pixel up on alternating strides.
-    let bob = if moving && dash.is_none() && (p.anim * 9.0) as i32 % 2 == 0 { -1 } else { 0 };
+    // Flyers hover; walkers bob one pixel up on alternating strides.
+    let bob = if ch.flies {
+        hover(w.time)
+    } else if moving && dash.is_none() && (p.anim * 9.0) as i32 % 2 == 0 {
+        -1
+    } else {
+        0
+    };
     cv.blit_centered(f, px, py + bob, Blit { flip_x: p.facing < 0.0, flash, alpha: 255 });
+}
+
+/// A flyer's height over its shadow: a slow bob between 0 and 2 pixels up.
+fn hover(time: f32) -> i32 {
+    ((time * 4.0).sin() * 1.2 - 1.0).round() as i32
+}
+
+/// Sparkles on the hero, drawn through hurt blinking: the dash-ready glint on
+/// its back and the impact star at its head when its own blast goes off.
+fn marks(cv: &mut Canvas, w: &World, ch: &CharacterDef, (px, py): (i32, i32)) {
+    let (h, facing) = (&w.fx.hero, w.player.facing);
+    let lift = if ch.flies { hover(w.time) } else { 0 };
+    // Grows then shrinks: 0 to 1 and back over `t` in 0..1.
+    let swell = |t: f32| 1.0 - (2.0 * t - 1.0).abs();
+    if h.ready > 0.0 {
+        let len = (swell(1.0 - h.ready / READY_TIME) * 2.0).round() as i32;
+        let x = px - (facing * 3.0) as i32;
+        fx::star(cv, x, py - 5 + lift, len, palette::ICE, palette::CYAN);
+    }
+    if h.impact > 0.0 {
+        let len = (swell(1.0 - h.impact / IMPACT_TIME) * 4.0).round() as i32;
+        let (x, y) = (px + (ch.muzzle.0 * facing) as i32, py + ch.muzzle.1 as i32 + lift);
+        fx::star(cv, x, y, len, palette::CREAM, palette::GOLD);
+    }
 }
 
 /// The frame of a one-shot pose `t` of the way through (0 to 1).

@@ -6,6 +6,7 @@ use crate::game::world::World;
 use crate::items::Stat;
 use crate::render::canvas::{Blit, Canvas};
 use crate::render::font;
+use crate::render::fx::READY_TIME;
 use crate::render::palette::{self, INK};
 use crate::render::sprite::bank;
 
@@ -46,14 +47,25 @@ fn hearts(cv: &mut Canvas, w: &World, clock: f32) {
 fn bottom(cv: &mut Canvas, w: &World, clock: f32) {
     let y0 = cv.h - 12;
 
-    // Dash cooldown: the icon fills from the bottom and brightens when ready.
+    // Dash cooldown: the icon fills from the bottom and brightens when ready,
+    // pulsing for a moment as it comes back.
     let icon = bank().named("dash_icon").first();
     let (ix, iy) = (3, y0);
     let p = &w.player;
     let max = w.stats.get(Stat::DashCooldown);
     let ready = p.dash_cd <= 0.0 || max <= 0.0;
+    let pulse = w.fx.hero.ready / READY_TIME;
     cv.fill_rect(ix, iy, 11, 11, INK);
-    if ready {
+    if ready && pulse > 0.0 {
+        let (edge, glow, fill) = if pulse > 0.5 {
+            (palette::ICE, palette::CYAN, palette::BONE)
+        } else {
+            (palette::CYAN, palette::BLUE, palette::ICE)
+        };
+        cv.rect(ix - 1, iy - 1, 13, 13, glow);
+        cv.rect(ix, iy, 11, 11, edge);
+        cv.blit(icon, ix + 1, iy + 1, Blit { flash: Some(fill), ..Blit::default() });
+    } else if ready {
         cv.rect(ix, iy, 11, 11, palette::CYAN);
         cv.blit(icon, ix + 1, iy + 1, Blit::default());
     } else {
@@ -83,6 +95,12 @@ fn bottom(cv: &mut Canvas, w: &World, clock: f32) {
         cv.fill_rect(x0 + 1, by + 1, fill, 3, palette::SKY);
         cv.hline(x0 + 1, x0 + fill, by + 1, palette::CYAN);
         cv.hline(x0 + 1, x0 + fill, by + 3, palette::BLUE);
+        // Fresh XP lights up the head of the bar.
+        if w.fx.hero.xp > 0.0 {
+            let head = (x0 + fill - 8).max(x0 + 1);
+            cv.fill_rect(head, by + 1, x0 + fill - head + 1, 3, palette::CYAN);
+            cv.hline(head, x0 + fill, by + 1, palette::ICE);
+        }
         let glint = x0 + 1 + ((clock * 70.0) as i32).rem_euclid(bw + 40) - 20;
         for k in 0..3 {
             let gx = glint + k;

@@ -276,6 +276,7 @@ Enemies with `hp` of 40 or more, and elites, show a health bar when damaged.
     dash: "rex_dash",                   // optional: pose held through a dash
     muzzle: (6.0, -2.0),                // optional: where shots leave the sprite, px from center facing right
     legs: 11,                           // optional: art row where legs start; running keeps the stride's legs under the attack pose
+    flies: false,                       // optional: hovers over its shadow and kicks no dust
     unlock: 0,                          // optional: bones to unlock, 0 = free
     weapon: (shot: "bolt", pattern: Aimed),
     base: { MaxHp: 8.0, FireRate: 2.0 }, // optional: overrides stat defaults for the hero and its weapon
