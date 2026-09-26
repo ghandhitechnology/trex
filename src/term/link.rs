@@ -13,9 +13,11 @@ pub const FPS: f32 = 30.0;
 /// share a burst with a screenful of placeholder text.
 const LOST: Duration = Duration::from_millis(1500);
 const LOST_UNKNOWN: Duration = Duration::from_millis(500);
-/// Frames written off in a row, with no answer between, before frames go out
-/// unpaced.
-const GIVE_UP: u32 = 4;
+/// A terminal that has answered nothing this long after the first frame is
+/// taken to never answer, and frames go out unpaced. One that has answered
+/// stays paced: under tmux, which buffers passthrough without limit, missing
+/// answers mean a backlog, and unpaced frames would only grow it.
+const SILENT: Duration = Duration::from_secs(5);
 /// Round-trip probes: often until a few samples are in, then rarely, since
 /// each one briefly drains the link.
 const PROBE_FAST: Duration = Duration::from_millis(500);
@@ -37,8 +39,8 @@ enum Replies {
 
 pub struct Link {
     replies: Replies,
-    /// Frames written off since the last answer.
-    lost: u32,
+    /// When the first frame went out.
+    first_sent: Option<Instant>,
     /// Sent time of each unanswered frame, oldest first.
     in_flight: VecDeque<Instant>,
     probe_sent: Option<Instant>,
@@ -53,7 +55,7 @@ impl Link {
     pub fn new() -> Self {
         Link {
             replies: Replies::Unknown,
-            lost: 0,
+            first_sent: None,
             in_flight: VecDeque::new(),
             probe_sent: None,
             last_probe: None,
@@ -85,12 +87,11 @@ impl Link {
         let lost = if self.replies == Replies::Unknown { LOST_UNKNOWN } else { LOST };
         while self.in_flight.front().is_some_and(|&t| now - t > lost) {
             self.in_flight.pop_front();
-            self.lost += 1;
         }
         if self.probe_sent.is_some_and(|t| now - t > lost) {
             self.probe_sent = None;
         }
-        if self.lost >= GIVE_UP && self.replies != Replies::Absent {
+        if self.replies == Replies::Unknown && self.first_sent.is_some_and(|t| now - t > SILENT) {
             self.replies = Replies::Absent;
             self.in_flight.clear();
         }
@@ -125,6 +126,7 @@ impl Link {
     }
 
     pub fn sent(&mut self, now: Instant) {
+        self.first_sent.get_or_insert(now);
         if self.wants_replies() {
             self.in_flight.push_back(now);
         }
@@ -132,7 +134,6 @@ impl Link {
 
     fn heard(&mut self) {
         self.replies = Replies::Working;
-        self.lost = 0;
     }
 
     pub fn probe_answered(&mut self, now: Instant) {
@@ -242,11 +243,21 @@ mod tests {
     }
 
     #[test]
+    fn answers_lost_at_launch_do_not_unpace_a_slow_link() {
+        // tmux drops the answers in the launch burst; about 2 s of them here.
+        for (mbit, rtt) in [(1.0, 80), (2.0, 120), (3.0, 150)] {
+            let (_, worst) = simulate(23.0, mbit, rtt, 12);
+            let carry = Duration::from_secs_f32(23.0 * 1024.0 * 8.0 / (mbit * 1e6));
+            assert!(worst < Duration::from_millis(rtt) + carry * 3, "{mbit} Mbit/s, {rtt} ms: {worst:?}");
+        }
+    }
+
+    #[test]
     fn a_terminal_that_never_answers_gets_unpaced_frames() {
         let t0 = Instant::now();
         let mut link = Link::new();
         let mut sent = 0;
-        for ms in (0..3000).step_by(33) {
+        for ms in (0..8000).step_by(33) {
             let now = t0 + Duration::from_millis(ms);
             if link.ready(now) {
                 link.probe_due(now);
