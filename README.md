@@ -7,6 +7,7 @@ graphics. Spec: `DESIGN.md`. Data format: `content/README.md`.
 cargo run --release                     # play (Ghostty or Kitty, tmux ok)
 trex --dump-frames DIR --seconds 60 --seed 3 [--every 2] [--size 256x144] [--hero ID]
 trex --sim --runs 30 [--seed 1] [--max-secs 1800] [--hero ID]
+trex --stress [--minutes 60] [--seed 1] [--size 256x144] [--hero ID]
 trex --sheet sheet.png
 ```
 
@@ -14,7 +15,9 @@ trex --sheet sheet.png
 `hub_*.png` menus over a mid-progress save, a gameplay frame every `--every`
 seconds, the first three level-up screens, `paused.png` halfway, `dying.png`
 mid death transition, and `dead.png`. `--sim` runs bot games without
-rendering and prints survival stats. Both are deterministic per seed.
+rendering and prints survival stats. `--stress` plays an unkillable bot
+run, renders every tick like the live loop, and prints entity counts and
+frame cost per minute. All three are deterministic per seed.
 
 Env: `TREX_GFX=shm|file|direct` pins the transfer medium, `TREX_SCALE=N`
 pins the upscale, `TREX_SAVE=PATH` moves the save, `TREX_WARP=SECS` starts

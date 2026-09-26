@@ -23,6 +23,8 @@ usage:
                                         bot run, write PNG frames (4x)
   trex --sim [--runs N] [--seed S] [--max-secs N] [--hero ID]
                                         bot runs without rendering, print stats
+  trex --stress [--minutes N] [--seed S] [--size WxH] [--hero ID]
+                                        unkillable bot run, print entity counts and frame cost
   trex --sheet FILE                     write every sprite to one PNG
 
 env:
@@ -87,6 +89,11 @@ fn run(args: &Args) -> Result<(), String> {
         let (runs, seed, max_secs) =
             (args.parse("--runs", 20)?, args.parse("--seed", 1)?, args.parse("--max-secs", 1800.0)?);
         headless::sim(runs, seed, max_secs, hero(args)?);
+        return Ok(());
+    }
+    if args.flag("--stress") {
+        let size = args.value("--size").map_or(Ok((256, 144)), size)?;
+        headless::stress(args.parse("--minutes", 60.0)?, args.parse("--seed", 1)?, size, hero(args)?);
         return Ok(());
     }
     if let Some(file) = args.value("--sheet") {

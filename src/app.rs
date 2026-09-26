@@ -20,7 +20,7 @@ use crate::term::{self, PaneSize, Session};
 /// Logical framebuffer area in pixels (about 256x144, reshaped to the pane).
 const TARGET_AREA: f32 = 256.0 * 144.0;
 /// Most pixels we transmit per frame after integer upscaling.
-const PIXEL_BUDGET: f32 = 600_000.0;
+pub const PIXEL_BUDGET: f32 = 600_000.0;
 /// Most sim ticks run in one loop pass before we drop time.
 const MAX_CATCHUP: u32 = 5;
 

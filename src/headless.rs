@@ -181,6 +181,54 @@ pub fn sim(runs: u32, seed: u64, max_secs: f32, hero: Option<&str>) {
     println!("elapsed   {:.2}s", start.elapsed().as_secs_f32());
 }
 
+/// An unkillable bot run with visuals on that renders and upscales every
+/// tick like the live loop, printing entity counts and frame cost per minute.
+pub fn stress(minutes: f32, seed: u64, size: (i32, i32), hero: Option<&str>) {
+    let mut game = Game::new(start_save(hero), None, seed, size, true);
+    game.start_run();
+    let mut bot = Bot::new(seed);
+    let mut cv = Canvas::new(size.0, size.1);
+    let mut rgb = Vec::new();
+    // The live loop's upscale for this size.
+    let k = ((crate::app::PIXEL_BUDGET / (size.0 * size.1) as f32).sqrt() as usize).max(1);
+    let ms = |d: std::time::Duration| d.as_secs_f64() * 1000.0;
+    let (mut sim, mut draw, mut ticks) = ((0.0f64, 0.0f64), (0.0f64, 0.0f64), 0u32);
+    println!("min  enemies shots gems  parts texts  sim avg/max ms  draw avg/max ms");
+    for tick in 1..=(minutes * 60.0 * TICK_HZ as f32) as u64 {
+        if let Some(w) = game.world.as_mut() {
+            w.player.hp = w.max_hp();
+        }
+        let c = bot.controls(&game);
+        let t0 = Instant::now();
+        game.update(&c);
+        let t1 = Instant::now();
+        game.render(&mut cv);
+        cv.scaled_rgb(k, &mut rgb);
+        let (s, d) = (ms(t1 - t0), ms(t1.elapsed()));
+        sim = (sim.0 + s, sim.1.max(s));
+        draw = (draw.0 + d, draw.1.max(d));
+        ticks += 1;
+        if tick % (60 * TICK_HZ as u64) == 0 {
+            let w = game.world.as_ref().expect("run has a world");
+            let n = f64::from(ticks);
+            println!(
+                "{:>3}  {:>7} {:>5} {:>4} {:>6} {:>5}  {:>6.2} / {:<6.2} {:>6.2} / {:<6.2}",
+                tick / (60 * TICK_HZ as u64),
+                w.enemies.len() + w.director.pending.len(),
+                w.shots.len(),
+                w.gems.len(),
+                w.fx.particles.len(),
+                w.fx.texts.len(),
+                sim.0 / n,
+                sim.1,
+                draw.0 / n,
+                draw.1,
+            );
+            (sim, draw, ticks) = ((0.0, 0.0), (0.0, 0.0), 0);
+        }
+    }
+}
+
 /// Every sprite in the bank on one labeled sheet.
 pub fn sheet(path: &Path) -> io::Result<()> {
     let sprites = bank().all();
