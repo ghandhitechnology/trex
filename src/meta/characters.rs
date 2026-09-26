@@ -11,7 +11,11 @@ pub struct CharacterDef {
     pub id: String,
     pub name: String,
     pub desc: String,
+    /// Walk animation.
     pub sprite: String,
+    /// Idle animation. Optional; without it the hero stands on the first walk frame.
+    #[serde(default)]
+    pub idle: String,
     /// Meta currency cost to unlock. 0 means available from the start.
     #[serde(default)]
     pub unlock: u32,
@@ -27,6 +31,8 @@ pub struct CharacterDef {
     pub triggers: Vec<Trigger>,
     #[serde(skip)]
     pub sprite_id: SpriteId,
+    #[serde(skip)]
+    pub idle_id: Option<SpriteId>,
 }
 
 #[derive(Deserialize, Debug)]

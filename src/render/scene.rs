@@ -93,7 +93,11 @@ pub fn draw_world(cv: &mut Canvas, w: &World, floor: Option<&Canvas>, dead: bool
                 if !blink {
                     let s = bank.get(ch.sprite_id);
                     let moving = p.vel.len_sq() > 25.0;
-                    let f = if moving { s.frame_at(p.anim * 1.5, 6.0) } else { s.first() };
+                    let f = match ch.idle_id {
+                        _ if moving => s.frame_at(p.anim * 1.5, 6.0),
+                        Some(idle) => bank.get(idle).frame_at(w.time, 2.5),
+                        None => s.first(),
+                    };
                     let flash = (p.hurt > 0.0).then_some(palette::BONE);
                     cv.blit_centered(f, px, py, Blit { flip_x: p.facing < 0.0, flash, alpha: 255 });
                 }
