@@ -67,7 +67,8 @@ pub fn update(w: &mut World, c: &Controls, dt: f32) {
     if p.dash_time > 0.0 {
         p.dash_time -= dt;
         p.vel = p.dash_dir * speed * DASH_SPEED;
-        let (pos, flip) = (p.pos, p.facing < 0.0);
+        let flip = if p.dash_dir.x.abs() > 0.01 { p.dash_dir.x < 0.0 } else { p.facing < 0.0 };
+        let pos = p.pos;
         let sprite = content::get().characters[w.character].sprite_id;
         let frame = (w.player.anim * 8.0) as usize;
         w.fx.ghost(pos, sprite, frame, flip);
@@ -78,8 +79,11 @@ pub fn update(w: &mut World, c: &Controls, dt: f32) {
 
     let p = &mut w.player;
     p.pos = w.arena.clamp(p.pos + p.vel * dt, RADIUS + 1.0);
-    // Mid-attack the hero keeps facing its target; otherwise it faces where it runs.
-    if p.attack > 0.0 && p.aim.x.abs() > 0.01 {
+    // A dash faces where it goes; mid-attack the hero keeps facing its
+    // target; otherwise it faces where it runs.
+    if p.dash_time > 0.0 && p.dash_dir.x.abs() > 0.01 {
+        p.facing = p.dash_dir.x.signum();
+    } else if p.attack > 0.0 && p.aim.x.abs() > 0.01 {
         p.facing = p.aim.x.signum();
     } else if p.vel.x.abs() > 4.0 {
         p.facing = p.vel.x.signum();
