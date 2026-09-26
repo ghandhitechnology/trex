@@ -5,7 +5,7 @@ use super::canvas::{Blit, Canvas};
 use super::palette;
 use super::sprite::bank;
 use crate::content;
-use crate::enemies::AiState;
+use crate::enemies;
 use crate::enemies::director::WARN_TIME;
 use crate::game::world::World;
 
@@ -23,6 +23,7 @@ pub fn draw_world(cv: &mut Canvas, w: &World, floor: Option<&Canvas>, dead: bool
         Some(f) => cv.copy_view(f, ox + PAD, oy + PAD, palette::INK),
         None => cv.clear(palette::DUSK),
     }
+    enemies::draw::ground(cv, w);
 
     let warn = bank.named("warn");
     for p in &w.director.pending {
@@ -31,6 +32,7 @@ pub fn draw_world(cv: &mut Canvas, w: &World, floor: Option<&Canvas>, dead: bool
         let f = warn.frame_at(t, 8.0);
         cv.blit_centered(f, x, y, Blit { alpha: 150 + (t / WARN_TIME * 105.0) as u8, ..Blit::default() });
     }
+    enemies::draw::under(cv, w);
 
     let (gem, gem_big) = (bank.named("gem"), bank.named("gem_big"));
     for g in &w.gems {
@@ -65,27 +67,8 @@ pub fn draw_world(cv: &mut Canvas, w: &World, floor: Option<&Canvas>, dead: bool
     for (_, b) in &bodies {
         match *b {
             Body::Enemy(i) => {
-                let e = &w.enemies[i];
-                let def = &content.enemies[e.kind];
-                let s = bank.get(def.sprite_id);
-                let (x, y) = cam.to_screen(e.pos);
-                let windup = e.state == AiState::Windup && (e.timer * 20.0) as i32 % 2 == 0;
-                let flash = if e.flash > 0.0 {
-                    Some(palette::BONE)
-                } else if windup {
-                    Some(palette::RED)
-                } else {
-                    None
-                };
-                let f = s.frame_at(e.anim + e.phase, 6.0);
-                cv.blit_centered(f, x, y, Blit { flip_x: e.vel.x < -1.0, flash, alpha: 255 });
-                if def.hp >= 40.0 && e.hp < e.max_hp {
-                    let bw = 12;
-                    let fill = ((e.hp / e.max_hp) * bw as f32).ceil() as i32;
-                    let by = y - f.h / 2 - 3;
-                    cv.fill_rect(x - bw / 2 - 1, by - 1, bw + 2, 3, palette::INK);
-                    cv.fill_rect(x - bw / 2, by, fill, 1, palette::RED);
-                }
+                let (x, y) = cam.to_screen(w.enemies[i].pos);
+                enemies::draw::body(cv, w, i, x, y);
             }
             Body::Player => {
                 let p = &w.player;
@@ -119,6 +102,7 @@ pub fn draw_world(cv: &mut Canvas, w: &World, floor: Option<&Canvas>, dead: bool
     }
 
     w.fx.draw_over(cv, cam);
+    enemies::draw::over(cv, w);
 
     if w.fx.flash > 0.0 {
         cv.wash(palette::RED, (w.fx.flash / 0.08 * 70.0) as u8);
