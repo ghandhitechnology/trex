@@ -1,6 +1,7 @@
 /* A pocket version of trex that lives in the hero's game pane: real sprites,
    WASD, Space to dash, auto-fire. Click the pane to take over. It pauses when
-   the canvas loses focus, the same way trex pauses on tmux focus-out. */
+   the canvas loses focus, the same way trex pauses on tmux focus-out.
+   A run drops you in at 1:30 with Saw Ring already taken, so it starts busy. */
 (function () {
   'use strict';
   const cv = document.querySelector('.arena');
@@ -21,7 +22,7 @@
   const atlas = new Image();
   atlas.src = T.atlas.src;
   const IMG = {};
-  const need = { rex: 'rex', rexIdle: 'rex-idle', grub: 'grub', mite: 'mite', slime: 'slime', slimelet: 'slimelet', bolt: 'bolt', gem: 'gem', heart: 'heart-full', heartE: 'heart-empty', skull: 'skull', tuft: 'p-tuft', rock: 'p-rock', bone: 'p-bone' };
+  const need = { rex: 'rex', rexIdle: 'rex-idle', grub: 'grub', mite: 'mite', slime: 'slime', slimelet: 'slimelet', wisp: 'wisp', bolt: 'bolt', saw: 'saw', sawRing: 'saw-ring', gem: 'gem', heart: 'heart-full', heartE: 'heart-empty', skull: 'skull', tuft: 'p-tuft', rock: 'p-rock', bone: 'p-bone' };
   Object.entries(need).forEach(([k, slug]) => {
     const s = T.spr[slug];
     const at = T.atlas.at[s[0]];
@@ -61,12 +62,19 @@
   let state;
   function reset() {
     state = {
-      t: 0, kills: 0, xp: 0, lv: 1, next: 5, hp: 4,
+      t: START, kills: 64, xp: 4, lv: 4, next: 14, hp: 4, fresh: true,
       p: { x: W / 2, y: H / 2 + 8, vx: 0, vy: 0, face: 1, dash: 0, dcd: 0, inv: 0, trail: [] },
-      foes: [], shots: [], gems: [], parts: [], nums: [], spawn: 0.6, fire: 0, rate: 0.5, shake: 0, banner: 0, dead: 0,
+      foes: [], shots: [], gems: [], parts: [], nums: [], spawn: 0.4, fire: 0, rate: 0.36, shake: 0, banner: 0, dead: 0, saw: 0,
     };
+    // 1:30 density: a ring of foes already closing in.
+    for (let i = 0; i < 22; i++) {
+      const a = rand(0, Math.PI * 2), d = rand(62, 130);
+      const r = Math.random();
+      spawnFoe(r < 0.45 ? 'grub' : r < 0.7 ? 'mite' : r < 0.85 ? 'wisp' : 'slime', state.p.x + Math.cos(a) * d, state.p.y + Math.sin(a) * d * 0.7);
+    }
+    for (let i = 0; i < 5; i++) state.gems.push({ x: rand(20, W - 20), y: rand(30, H - 30), ph: rand(0, 3) });
   }
-  reset();
+  const START = 90;
 
   const keys = new Set();
   let pointer = null;
@@ -114,7 +122,7 @@
     H0.user = true;
     pane.classList.add('playing');
     H0.reel.pause();
-    if (!state.t) say('', 2800);
+    if (state.fresh) { state.fresh = false; say('', 2000); }
     start();
   }
   function start() {
@@ -168,6 +176,7 @@
     mite: { hp: 4, spd: 34, r: 4, cols: [P.red, P.ember] },
     slime: { hp: 22, spd: 13, r: 6, cols: [P.grape, P.pink], split: 'slimelet' },
     slimelet: { hp: 6, spd: 26, r: 4, cols: [P.grape, P.pink] },
+    wisp: { hp: 8, spd: 30, r: 5, cols: [P.cyan, P.sky] },
   };
   function spawnFoe(kind, x, y) {
     const t = TYPES[kind];
@@ -177,7 +186,22 @@
       y = side === 2 ? -8 : side === 3 ? H + 8 : rand(0, H);
       if (side < 2) y = rand(10, H - 10);
     }
-    state.foes.push({ kind, x, y, hp: t.hp, t, kx: 0, ky: 0, flash: 0, ph: rand(0, 6) });
+    state.foes.push({ kind, x, y, hp: t.hp, t, kx: 0, ky: 0, flash: 0, ph: rand(0, 6), cut: 0 });
+  }
+  reset();
+
+  // Returns true while the foe is still standing.
+  function hit(f, dmg, kx, ky) {
+    const s = state;
+    f.hp -= dmg; f.flash = 0.08;
+    f.kx += kx; f.ky += ky;
+    s.nums.push({ x: f.x, y: f.y - 10, n: dmg, life: 0.6 });
+    if (f.hp > 0) return true;
+    s.kills++;
+    puff(f.x, f.y, 12, f.t.cols, 70);
+    s.gems.push({ x: f.x, y: f.y, ph: 0 });
+    if (f.t.split) { spawnFoe(f.t.split, f.x - 4, f.y); spawnFoe(f.t.split, f.x + 4, f.y); }
+    return false;
   }
 
   function update(dt) {
@@ -202,16 +226,16 @@
 
     // spawns
     s.spawn -= dt;
-    if (s.spawn <= 0 && s.foes.length < 14) {
+    if (s.spawn <= 0 && s.foes.length < 30) {
       const r = Math.random();
-      spawnFoe(r < 0.55 ? 'grub' : r < 0.85 ? 'mite' : 'slime');
-      s.spawn = Math.max(0.35, 1.1 - s.t * 0.01);
+      spawnFoe(r < 0.45 ? 'grub' : r < 0.7 ? 'mite' : r < 0.85 ? 'wisp' : 'slime');
+      s.spawn = Math.max(0.22, 0.5 - (s.t - START) * 0.004);
     }
     // foes
     for (const f of s.foes) {
       const dx = p.x - f.x, dy = p.y - f.y, d = Math.hypot(dx, dy) || 1;
       let vx = dx / d * f.t.spd, vy = dy / d * f.t.spd;
-      if (f.kind === 'mite') { f.ph += dt * 8; vx += -dy / d * Math.sin(f.ph) * 30; vy += dx / d * Math.sin(f.ph) * 30; }
+      if (f.kind === 'mite' || f.kind === 'wisp') { f.ph += dt * 8; vx += -dy / d * Math.sin(f.ph) * 30; vy += dx / d * Math.sin(f.ph) * 30; }
       f.x += (vx + f.kx) * dt; f.y += (vy + f.ky) * dt;
       f.kx *= Math.pow(0.02, dt); f.ky *= Math.pow(0.02, dt);
       f.flash = Math.max(0, f.flash - dt);
@@ -228,6 +252,17 @@
       const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy), m = a.t.r + b.t.r - 2;
       if (d > 0 && d < m) { const push = (m - d) / 2; a.x -= dx / d * push; a.y -= dy / d * push; b.x += dx / d * push; b.y += dy / d * push; }
     }
+    // Saw Ring: two blades orbit and cut whatever they pass through.
+    s.saw += dt * 3.4;
+    for (let k = 0; k < 2; k++) {
+      const a = s.saw + k * Math.PI, sx = p.x + Math.cos(a) * 22, sy = p.y + Math.sin(a) * 18;
+      for (const f of s.foes) {
+        f.cut = Math.max(0, f.cut - dt / 2);
+        if (f.hp <= 0 || f.cut > 0 || Math.hypot(f.x - sx, f.y - sy) > f.t.r + 4) continue;
+        f.cut = 0.35;
+        hit(f, 4 + ((Math.random() * 3) | 0), -Math.sin(a) * 60, Math.cos(a) * 60);
+      }
+    }
     // auto-fire at the nearest foe
     s.fire -= dt;
     if (s.fire <= 0) {
@@ -243,16 +278,8 @@
       b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt;
       for (const f of s.foes) {
         if (f.hp <= 0 || Math.hypot(f.x - b.x, f.y - b.y) > f.t.r + 2) continue;
-        const dmg = 6 + ((Math.random() * 3) | 0);
-        f.hp -= dmg; f.flash = 0.08; b.life = 0;
-        f.kx += b.vx * 0.25; f.ky += b.vy * 0.25;
-        s.nums.push({ x: f.x, y: f.y - 10, n: dmg, life: 0.6 });
-        if (f.hp <= 0) {
-          s.kills++;
-          puff(f.x, f.y, 12, f.t.cols, 70);
-          s.gems.push({ x: f.x, y: f.y, ph: 0 });
-          if (f.t.split) { spawnFoe(f.t.split, f.x - 4, f.y); spawnFoe(f.t.split, f.x + 4, f.y); }
-        } else puff(b.x, b.y, 3, [P.amber, P.gold], 40);
+        b.life = 0;
+        if (hit(f, 6 + ((Math.random() * 3) | 0), b.vx * 0.25, b.vy * 0.25)) puff(b.x, b.y, 3, [P.amber, P.gold], 40);
         break;
       }
     }
@@ -304,6 +331,7 @@
       spr(moving ? 'rex' : 'rexIdle', p.x, p.y, moving ? Math.floor(t / 120) : Math.floor(t / 300), p.face < 0);
     }
     for (const b of s.shots) spr('bolt', b.x, b.y, fr);
+    if (s.dead <= 0) for (let k = 0; k < 2; k++) { const a = s.saw + k * Math.PI; spr('saw', p.x + Math.cos(a) * 22, p.y + Math.sin(a) * 18, Math.floor(t / 60)); }
     for (const q of s.parts) { ctx.fillStyle = q.c; ctx.fillRect(Math.round(q.x), Math.round(q.y), 1, 1); }
     for (const n of s.nums) PX.drawText(ctx, n.n, Math.round(n.x - PX.measure(String(n.n)) / 2), Math.round(n.y), 1, P.bone, P.ink);
     ctx.restore();
@@ -319,6 +347,10 @@
     ctx.fillStyle = P.dusk; ctx.fillRect(5, H - 6, W - 10, 2);
     ctx.fillStyle = P.sky; ctx.fillRect(5, H - 6, Math.round((W - 10) * s.xp / s.next), 2);
     PX.drawText(ctx, 'LV' + s.lv, 5, H - 15, 1, P.gold, P.ink);
+    // the card already taken, in the item slot
+    ctx.fillStyle = P.ink; ctx.fillRect(4, H - 36, 18, 18);
+    ctx.fillStyle = P.night; ctx.fillRect(5, H - 35, 16, 16);
+    spr('sawRing', 13, H - 27);
     if (s.banner > 0) { const txt = 'LEVEL UP'; PX.drawText(ctx, txt, Math.round(W / 2 - PX.measure(txt)), 40, 2, P.gold, P.ink); }
     if (s.dead > 0) { const txt = 'YOU DIED'; PX.drawText(ctx, txt, Math.round(W / 2 - PX.measure(txt) * 1.5), 60, 3, P.red, P.ink); }
   }

@@ -45,15 +45,15 @@
   // ---------- Whole-pixel sizing for game footage ----------
   // Every clip is 256x144 game pixels. Size each one to a whole multiple
   // of that in device pixels so no game pixel is ever resampled.
-  function fit(w, h) {
+  function fit(w, h, nw = 256, nh = 144) {
     const d = window.devicePixelRatio || 1;
-    const k = Math.max(1, Math.floor(Math.min(w * d / 256, h * d / 144) + 1e-6));
-    return { w: k * 256 / d, h: k * 144 / d, k };
+    const k = Math.max(1, Math.floor(Math.min(w * d / nw, h * d / nh) + 1e-6));
+    return { w: k * nw / d, h: k * nh / d, k };
   }
-  function cover(w, h) {
+  function cover(w, h, nw = 256, nh = 144) {
     const d = window.devicePixelRatio || 1;
-    const k = Math.ceil(Math.max(w * d / 256, h * d / 144));
-    return { w: k * 256 / d, h: k * 144 / d, k };
+    const k = Math.ceil(Math.max(w * d / nw, h * d / nh));
+    return { w: k * nw / d, h: k * nh / d, k };
   }
   const setSize = (el, f) => { el.style.width = f.w + 'px'; el.style.height = f.h + 'px'; };
   const layouts = [];
@@ -219,6 +219,7 @@
   const border = $('.tborder');
   const focusTag = $('.focus-tag');
   const stampS = $('.stamp-s');
+  const termTitle = $('.term-title');
 
   // tmux draws the split as a column of │; fill it to the pane height.
   border.innerHTML = '<div class="half top"></div><div class="half bot"></div>';
@@ -226,29 +227,20 @@
 
   const narrow = matchMedia('(max-width: 900px)');
   layouts.push(function heroLayout() {
-    const bw = termBody.clientWidth;
-    if (narrow.matches) {
-      pane.style.width = ''; pane.style.height = '';
-      const f = fit(bw, innerHeight * 0.62);
-      screen.style.setProperty('--gw', f.w + 'px');
-      screen.style.setProperty('--gh', f.h + 'px');
-      return;
-    }
-    screen.style.removeProperty('--gw'); screen.style.removeProperty('--gh');
-    let top = 0;
-    for (let el = term; el; el = el.offsetParent) top += el.offsetTop;
-    const availH = Math.max(innerHeight - top - 30 - 24 - 12, 300);
-    const f = fit(bw - 300 - border.offsetWidth, availH);
-    setSize(pane, f);
-    fillBorder();
+    if (window.trexHeroFit) window.trexHeroFit();
+    if (!narrow.matches) fillBorder();
+    scrollLog();
   });
 
   const HERO = window.TREX_HERO = {
     pane, reel, user: false,
     focus(which) {
+      const was = term.dataset.focus;
       term.dataset.focus = which;
       focusTag.textContent = which === 'agent' ? 'agent' : 'trex';
+      if (was && was !== which && !RM) { focusTag.classList.remove('flash'); void focusTag.offsetWidth; focusTag.classList.add('flash'); }
     },
+    title(text) { termTitle.textContent = text || 'tmux · ~/api'; termTitle.classList.toggle('wait', !!text); },
     stamp(text) { stampS.textContent = text; },
   };
   HERO.focus('trex');
@@ -276,11 +268,21 @@
     { ask: 'bump deps and fix what breaks', read: ['Cargo.toml', 'src/http/client.rs', 'src/http/retry.rs'], found: 'reqwest 0.13 renamed the timeout builder.', edit: ['src/http/client.rs', 9, 9], test: 'cargo test', total: 1204, reply: 'nice. push it', after: 'Pushed. CI is green.' },
   ];
   const SPIN = ['▖', '▘', '▝', '▗'];
+  const agentPane = $('.pane-agent');
+  function scrollLog() {
+    // Scroll by whole lines so the top row is never cut in half.
+    const room = agentPane.clientHeight - 8;
+    const h = log.getBoundingClientRect().height;
+    const lh = h / Math.max(1, log.children.length);
+    const over = h - room;
+    log.style.transform = `translateY(${over > -8 ? -Math.ceil(over / lh) * lh : 8}px)`;
+  }
   function line(html) {
     const s = document.createElement('span');
     s.className = 'l'; s.innerHTML = html || ' ';
     log.appendChild(s);
-    while (log.children.length > 48) log.firstChild.remove();
+    if (log.children.length > 160 && !heroVisible) while (log.children.length > 40) log.firstChild.remove();
+    scrollLog();
     return s;
   }
   const prompt = (cmd) => `<span class="dim">~/api</span> <span class="ok">❯</span> <span class="you">${cmd}</span>`;
@@ -288,21 +290,23 @@
 
   async function review(t) {
     if (HERO.user) return;
+    HERO.title('waiting on you');
     await sleep(900);
-    if (HERO.user) return;
+    if (HERO.user) { HERO.title(); return; }
     HERO.focus('agent');
     HERO.stamp('focus-out · 8 fps');
     pane.classList.add('away');
     reel.pause();
     const ln = line(`<span class="ok">❯</span> <span class="you"></span><span class="cursor"></span>`);
     const you = $('.you', ln);
-    await sleep(1400);
-    for (const ch of t.reply) { you.textContent += ch; await sleep(rand(60, 120)); }
+    await sleep(2200);
+    for (const ch of t.reply) { you.textContent += ch; await sleep(rand(70, 130)); }
+    HERO.title();
     if (HERO.user) { $('.cursor', ln).remove(); return; }
-    await sleep(380);
+    await sleep(420);
     $('.cursor', ln).remove();
     line(`<span class="ok">●</span> ${t.after}`);
-    await sleep(1600);
+    await sleep(2400);
     if (HERO.user) return;
     HERO.focus('trex');
     pane.classList.remove('away');
@@ -353,9 +357,9 @@
       return;
     }
     agentLoop();
-    await sleep(250);
-    for (const ch of 'trex') { typed.textContent += ch; await sleep(rand(60, 100)); }
-    await sleep(160);
+    await sleep(120);
+    for (const ch of 'trex') { typed.textContent += ch; await sleep(rand(50, 80)); }
+    await sleep(120);
     bootReel();
   }
   new IntersectionObserver(([e]) => {
@@ -374,26 +378,14 @@
   addEventListener('resize', () => { cancelAnimationFrame(rsz); rsz = requestAnimationFrame(relayout); });
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(relayout);
 
-  // ---------- Nav: XP bar, level, active link ----------
+  // ---------- Nav: XP bar and active link ----------
   const secs = $$('main > section');
   const xpFill = $('.xp-fill');
-  const lvEl = $('.xp-lv');
-  let lv = 0;
   const navLinks = $$('.nav-links a');
   function onScrollNav() {
     const max = document.documentElement.scrollHeight - innerHeight;
     const p = max > 0 ? clamp(scrollY / max, 0, 1) : 0;
     xpFill.style.transform = `scaleX(${p.toFixed(4)})`;
-    const mid = scrollY + innerHeight * 0.5;
-    let n = 1;
-    secs.forEach((s, i) => { if (s.offsetTop < mid) n = i + 1; });
-    if (lv && n > lv && !RM) {
-      lvEl.classList.remove('up'); void lvEl.offsetWidth; lvEl.classList.add('up');
-      const r = lvEl.getBoundingClientRect();
-      fx.burst(r.left + r.width / 2, r.bottom, 10, [C.cyan, C.sky, C.gold], { min: 40, max: 140 });
-    }
-    lv = n;
-    lvEl.textContent = 'LV ' + lv;
     let cur = null;
     for (const s of secs) if (s.id && s.offsetTop - 120 < scrollY) cur = s.id;
     navLinks.forEach((a) => a.classList.toggle('on', a.getAttribute('href') === '#' + cur));
@@ -405,9 +397,9 @@
 
   // ---------- Reveal ----------
   const rv = new IntersectionObserver((es) => {
-    for (const e of es) if (e.isIntersecting) { e.target.classList.add('in'); rv.unobserve(e.target); }
-  }, { threshold: 0.12, rootMargin: '0px 0px -6% 0px' });
-  $$('[data-reveal]').forEach((el) => rv.observe(el));
+    for (const e of es) if (e.isIntersecting) { e.target.classList.add('in', 'seen'); rv.unobserve(e.target); }
+  }, { threshold: 0, rootMargin: '0px 0px -10% 0px' });
+  $$('[data-reveal], .step').forEach((el) => rv.observe(el));
 
   // ---------- Lazy videos ----------
   const lazyV = new IntersectionObserver((es) => {
@@ -423,10 +415,19 @@
       } else if (v.dataset.loaded) v.pause();
     }
   }, { rootMargin: '200px 0px' });
-  $$('video[data-lazy]').forEach((v) => lazyV.observe(v));
+  $$('video[data-lazy]').forEach((v) => { if (!(v.closest('.final-bg') && matchMedia('(max-width: 720px)').matches)) lazyV.observe(v); });
 
   const finalV = $('.final-bg video');
-  layouts.push(() => { const r = $('.final').getBoundingClientRect(); setSize(finalV, cover(r.width, r.height)); });
+  const swarm = $('.final-swarm');
+  const phone = matchMedia('(max-width: 720px)');
+  layouts.push(() => {
+    const r = $('.final').getBoundingClientRect();
+    if (phone.matches) {
+      const f = cover(r.width, r.height, 72, 120);
+      swarm.style.backgroundSize = `${f.w}px ${f.h}px`;
+      if (!finalV.paused) finalV.pause();
+    } else setSize(finalV, cover(r.width, r.height));
+  });
 
   // ---------- Marquee ----------
   (function marquee() {
@@ -451,7 +452,7 @@
   // ---------- Run: headline kill counter ----------
   (function killboard() {
     const el = $('.kb-n');
-    const TO = 7941;
+    const TO = 7800;
     const set = (n) => { el.textContent = n.toLocaleString('en-US'); delete el.dataset.pxDone; PX.render(el); };
     set(RM ? TO : 1);
     if (RM) return;
@@ -479,7 +480,7 @@
       { id: 'boss-colossus', t: 368, name: 'Bone Colossus', icon: 'colossus', boss: 1, d: 'A triceratops skeleton. Explosion rings, cyan spray, no room to breathe.' },
       { id: 'lightning-build', t: 600, name: 'Lightning build', icon: 'ptera', d: 'Bone Dunes on a two-heart bird. Meteors overhead, chain lightning below.' },
       { id: 'boss-sandmaw', t: 745, name: 'Sandmaw', icon: 'sandmaw', boss: 1, d: 'A level-up mid-fight, then the floor rolls over into Spore Marsh.' },
-      { id: 'late-chaos', t: 870, name: 'LV 41 · 7,600 kills', icon: 'rex', d: 'Hundreds on screen and damage numbers everywhere. The rex is in there somewhere.' },
+      { id: 'late-chaos', t: 870, name: 'LV 41 swarm', icon: 'rex', d: 'Hundreds on screen, damage numbers everywhere, 7,800 kills by 14:39. The rex is in there somewhere.' },
     ];
     const list = $('.chapters');
     const marks = $('.track-marks');
@@ -649,7 +650,10 @@
     const main = $('#pipe-screen');
     layouts.push(() => {
       if (!narrow.matches) setSize(main, fit(pipeEl.clientWidth - 380 - 56 - 16, innerHeight - 220));
-      $$('.inline-vis .pipe-screen').forEach((w) => setSize(w, fit(w.parentElement.clientWidth - 16, 4096)));
+      $$('.inline-vis .pipe-screen').forEach((w) => {
+        const f = fit(w.parentElement.clientWidth - 16, 4096);
+        if ($('.pv-code', w)) { w.style.width = f.w + 'px'; w.style.height = ''; } else setSize(w, f);
+      });
       zooms.forEach(sizeZoom);
       sizeFlows();
     });
@@ -664,7 +668,8 @@
     const desc = $('.hub-desc');
     const hearts = $('.hearts');
     const weapon = $('.hub-weapon');
-    const bars = $$('.bar i');
+    const bars = $$('.stats .bar');
+    bars.forEach((b) => { for (let k = 0; k < 10; k++) { const c = document.createElement('i'); c.style.setProperty('--c', k); b.appendChild(c); } });
     const TRICK = { rex: 'Dash: shockwave', ptera: 'Dash: feather volley', trike: 'Hurt: explode', raptor: 'Crit: set them on fire', spino: 'Hit: slow', stego: 'Hurt: ring of 12 spikes', pachy: 'Dash: headbutt blast' };
     const SHOT = { bolt: 'ember bolt', 'feather-shot': 'twin feathers', horn: 'piercing horn', claw: 'short claw', bubble: 'homing bubble', spike: 'spike ring', pebble: 'pebble spread' };
     const GOAL = (g) => {
@@ -703,13 +708,116 @@
       desc.textContent = h.desc;
       hearts.innerHTML = '';
       for (let k = 0; k < Math.ceil(h.hp / 2); k++) hearts.appendChild(sprite(h.hp - k * 2 >= 2 ? 'heart-full' : 'heart-half', 3));
-      bars.forEach((b) => b.style.setProperty('--v', h[b.dataset.k + 'Bar']));
-      weapon.innerHTML = '';
-      weapon.appendChild(sprite(h.shot, 4));
-      const t = document.createElement('span');
-      t.innerHTML = `Shoots <b>${SHOT[h.shot] || h.shot}</b> · ${TRICK[h.id] || ''}`;
-      weapon.appendChild(t);
+      bars.forEach((b) => {
+        const n = clamp(Math.round(h[b.dataset.k + 'Bar'] * 10), 1, 10);
+        $$('i', b).forEach((c, k) => c.classList.toggle('on', k < n));
+      });
+      weapon.innerHTML = `<span>Shoots <b>${SHOT[h.shot] || h.shot}</b></span><span>${TRICK[h.id] || ''}</span>`;
+      range.set(h);
     }
+
+    // A pocket firing range: the picked dino shoots its real shot at a grub.
+    const range = (() => {
+      const cv = $('.range');
+      const box = cv.closest('.hub-range');
+      const ctx = cv.getContext('2d');
+      const RW = 128, RH = 72;
+      const img = new Image();
+      img.src = AT.src;
+      const atl = (sp) => { if (typeof sp === 'string') sp = spec(sp); const at = AT.at[sp.src.replace(/^assets\//, '')] || [0, 0]; return { x: at[0], y: at[1], w: sp.w, h: sp.h, n: sp.n }; };
+      const GRUB = atl('grub'), TUFT = atl('p-tuft'), ROCK = atl('p-rock');
+      let hero = null, run = null, shot = null, pwr = 12;
+      let shots = [], nums = [], bits = [], foe = null, fire = 0.3, n = 0, dash = 0, t = 0, last = 0, raf = 0, on = false;
+      const floor = document.createElement('canvas');
+      floor.width = RW; floor.height = RH;
+      function paintFloor() {
+        const f = floor.getContext('2d');
+        for (let y = 0; y < RH; y += 8) for (let x = 0; x < RW; x += 8) {
+          f.fillStyle = ((x + y) / 8) % 2 ? '#1b3a3a' : '#183434';
+          f.fillRect(x, y, 8, 8);
+          f.fillStyle = '#122a2a'; f.fillRect(x, y, 8, 1);
+        }
+        [[TUFT, 10, 10], [ROCK, 96, 8], [TUFT, 60, 60], [TUFT, 118, 54]].forEach(([s, x, y]) => f.drawImage(img, s.x, s.y, s.w, s.h, x, y, s.w, s.h));
+        floor.done = true;
+      }
+      const put = (s, x, y, fr = 0, alpha = 1) => {
+        ctx.globalAlpha = alpha;
+        ctx.drawImage(img, s.x + (fr % s.n) * s.w, s.y, s.w, s.h, Math.round(x - s.w / 2), Math.round(y - s.h / 2), s.w, s.h);
+        ctx.globalAlpha = 1;
+      };
+      const newFoe = () => ({ x: RW + 10, y: 40, hp: 5, flash: 0, kx: 0 });
+      function step(dt) {
+        t += dt;
+        if (!foe) foe = newFoe();
+        if (foe.x > 100) foe.x -= 26 * dt;
+        foe.x += foe.kx * dt; foe.kx *= Math.pow(0.01, dt);
+        foe.flash = Math.max(0, foe.flash - dt);
+        dash = Math.max(0, dash - dt);
+        fire -= dt;
+        if (fire <= 0 && foe.x < RW - 6) {
+          fire = 0.55;
+          shots.push({ x: 32, y: 40, vx: 150 });
+          if (++n % 7 === 0) dash = 0.5;
+        }
+        for (const b of shots) {
+          b.x += b.vx * dt;
+          if (foe && Math.abs(b.x - foe.x) < 5) {
+            b.dead = true;
+            const crit = Math.random() < 0.2;
+            const d = Math.round(pwr * rand(0.85, 1.15) * (crit ? 2 : 1));
+            nums.push({ x: foe.x + rand(-3, 3), y: foe.y - 12, n: d, crit, life: 0.7 });
+            foe.flash = 0.08; foe.kx = 40; foe.hp--;
+            if (foe.hp <= 0) {
+              for (let k = 0; k < 14; k++) { const a = rand(0, Math.PI * 2), v = rand(20, 70); bits.push({ x: foe.x, y: foe.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: rand(0.3, 0.6), c: pick([C.sand, C.clay, C.bone]) }); }
+              foe = null;
+            }
+          }
+        }
+        shots = shots.filter((b) => !b.dead && b.x < RW + 8);
+        for (const q of nums) { q.y -= 16 * dt; q.life -= dt; }
+        nums = nums.filter((q) => q.life > 0);
+        for (const q of bits) { q.x += q.vx * dt; q.y += q.vy * dt; q.vx *= 0.9; q.vy *= 0.9; q.life -= dt; }
+        bits = bits.filter((q) => q.life > 0);
+      }
+      function draw() {
+        if (!img.complete || !hero) return;
+        if (!floor.done) paintFloor();
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(floor, 0, 0);
+        const fr = Math.floor(t * 1000 / 300);
+        const hx = 22 + (dash > 0.25 ? (0.5 - dash) * 40 : dash * 40);
+        ctx.fillStyle = 'rgba(15,11,24,.45)';
+        ctx.fillRect(Math.round(hx - 6), 48, 12, 2);
+        if (dash > 0) for (let k = 1; k <= 3; k++) put(run, hx - k * 5, 40, fr, 0.25);
+        put(dash > 0 ? run : hero, hx, 40, dash > 0 ? Math.floor(t * 1000 / 120) : fr);
+        if (foe) {
+          ctx.fillStyle = 'rgba(15,11,24,.45)'; ctx.fillRect(Math.round(foe.x - 5), 46, 10, 2);
+          put(GRUB, foe.x, foe.y, Math.floor(t * 1000 / 200));
+          if (foe.flash > 0) { ctx.globalCompositeOperation = 'lighter'; put(GRUB, foe.x, foe.y, Math.floor(t * 1000 / 200)); put(GRUB, foe.x, foe.y, Math.floor(t * 1000 / 200)); ctx.globalCompositeOperation = 'source-over'; }
+        }
+        for (const b of shots) put(shot, b.x, b.y, Math.floor(t * 1000 / 100));
+        for (const q of bits) { ctx.fillStyle = q.c; ctx.fillRect(Math.round(q.x), Math.round(q.y), 1, 1); }
+        for (const q of nums) PX.drawText(ctx, q.n, Math.round(q.x - PX.measure(String(q.n)) / 2), Math.round(q.y), 1, q.crit ? C.gold : C.bone, C.ink);
+      }
+      function loop(now) {
+        const dt = Math.min(0.05, (now - (last || now)) / 1000); last = now;
+        step(dt); draw();
+        raf = on ? requestAnimationFrame(loop) : 0;
+      }
+      img.onload = () => { if (!raf) { step(0.4); draw(); } };
+      new IntersectionObserver(([e]) => {
+        on = e.isIntersecting && !RM;
+        if (on && !raf) { last = 0; raf = requestAnimationFrame(loop); }
+      }).observe(cv);
+      layouts.push(() => setSize(cv, fit(box.clientWidth - 16, 4096, RW, RH)));
+      return {
+        set(h) {
+          hero = atl(h.idle); run = atl(h.sprite); shot = atl(h.shot); pwr = h.pwr;
+          shots = []; nums = []; n = 0; dash = 0;
+          if (RM || !raf) { for (let k = 0; k < 40; k++) step(0.03); draw(); }
+        },
+      };
+    })();
     select(0);
     tiles.addEventListener('keydown', (e) => {
       if (e.key === 'ArrowRight') { select(cur + 1, true); e.preventDefault(); }
@@ -929,14 +1037,15 @@
       });
       lanes.appendChild(col);
     });
-    T.bosses.forEach((b, k) => {
+    const marks = T.bosses.map((b, k) => {
       const m = document.createElement('span');
-      m.className = 'spawn-bossmark';
       const t = (k + 1) * 180;
+      m.className = 'spawn-bossmark' + (t >= 900 ? ' end' : '');
       m.style.left = (t / 900 * 100) + '%';
-      if (t >= 900) m.style.transform = 'translateX(-100%)';
-      m.textContent = b.name;
+      m.appendChild(sprite(b.sprite, 2, { fd: 220 }));
+      m.append(b.name);
       lanes.appendChild(m);
+      return { m, t };
     });
 
     const ro = { fig: $('.ro-fig'), name: $('.ro-name'), desc: $('.ro-desc'), stats: $('.ro-stats'), tag: $('.ro-new') };
@@ -967,6 +1076,7 @@
         latest = m;
       }
       if (latest) show(latest.e, latest.t, true);
+      marks.forEach((b) => b.m.classList.toggle('on', b.t <= t));
     }
     if (RM) { setT(900); light(900, false); return; }
     setT(0); light(0, false);
@@ -980,7 +1090,7 @@
       const step = (now) => {
         const t = clamp((now - t0) / dur, 0, 1) * 900;
         setT(t); light(t, true);
-        if (!touched && scroller.scrollWidth > scroller.clientWidth) scroller.scrollLeft = (t / 900) * band.offsetWidth - scroller.clientWidth * 0.4;
+        if (FINE && !touched && scroller.scrollWidth > scroller.clientWidth) scroller.scrollLeft = (t / 900) * band.offsetWidth - scroller.clientWidth * 0.4;
         if (t < 900) requestAnimationFrame(step);
       };
       requestAnimationFrame(step);
@@ -1002,6 +1112,14 @@
       pane.scrollIntoView({ block: 'center', behavior: RM ? 'auto' : 'smooth' });
       setTimeout(() => { if (window.TREX_ARENA) window.TREX_ARENA.takeover(); }, RM ? 0 : 500);
     });
+  })();
+
+  // ---------- Setup: step 3 result ----------
+  (function mini() {
+    const phone = matchMedia('(max-width: 720px)');
+    const body = $('.mini-body');
+    const shot = $('.mini-shot');
+    layouts.push(() => setSize(shot, fit(body.clientWidth - (phone.matches ? 0 : Math.min(210, body.clientWidth * 0.42)), 4096)));
   })();
 
   // ---------- Final horde ----------
@@ -1088,7 +1206,7 @@
       });
       return c;
     }
-    for (let i = 0; i < 5; i++) list.push(make(i));
+    [0, 1, 3].forEach((k) => list.push(make(k)));
     layout();
     let last = 0;
     function tick(t) {
@@ -1103,6 +1221,11 @@
           const dx = tx - c.x, dy = ty - c.y, d = Math.hypot(dx, dy);
           if (d < 4 && !near) { c.tx = rand(c.z[0], c.z[1]); c.ty = rand(120, H - 80); }
           else if (d > 1) { c.x += dx / d * sp * dt; c.y += dy / d * sp * dt; if (Math.abs(dx) > 2) c.face = dx < 0 ? -1 : 1; }
+          for (const o of list) {
+            if (o === c || o.dead) continue;
+            const sx = c.x - o.x, sy = c.y - o.y, sd = Math.hypot(sx, sy);
+            if (sd < 96) { c.y += (sy >= 0 ? 1 : -1) * (96 - sd) * dt * 3; if (sd < 48) c.ty = clamp(c.ty + (sy >= 0 ? 60 : -60), 120, H - 80); }
+          }
           c.el.style.transform = `translate3d(${Math.round(c.x)}px, ${Math.round(c.y)}px, 0)`;
           c.s.style.transform = c.face < 0 ? 'scaleX(-1)' : '';
         }

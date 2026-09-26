@@ -35,6 +35,7 @@
   <link rel="preload" as="image" href="assets/video/reel.png">
   <link rel="preload" as="image" href="assets/sprites/atlas.png">
   <script>document.documentElement.classList.add('js');</script>
+  <script src="js/pixelfont.js"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -62,7 +63,6 @@
         <span class="kills-ico"></span>
         <span class="kills-n">0</span>
       </div>
-      <span class="xp-lv" aria-hidden="true" title="Scroll to level up">LV 1</span>
       <a class="btn btn--sm" data-burst href="https://github.com/ghandhitechnology/trex" rel="noopener">
         <svg aria-hidden="true"><use href="#gh"/></svg><span>GitHub</span>
       </a>
@@ -81,6 +81,7 @@
   <div class="wrap hero-in">
     <p class="eyebrow"><span class="num">$ trex</span> roguelite · kitty graphics · tmux · rust</p>
     <h1 data-px data-px-bands data-px-depth="1">Survive the build.</h1>
+    <script>PX.render(document.querySelector('.hero h1'));</script>
     <div class="hero-row">
       <p class="lede">A pixel roguelite that runs <span class="hl">inside your terminal</span>. Split a tmux pane, type <b>trex</b>, and play while your agent works.</p>
       <div class="cta">
@@ -88,7 +89,7 @@
           <svg aria-hidden="true"><use href="#gh"/></svg><span>Star on GitHub</span><span class="stars" hidden><svg class="star" aria-hidden="true"><use href="#star"/></svg><b class="stars-n"></b></span>
         </a>
         <div class="install">
-          <code><span class="sigil">$</span>cargo install --git https://github.com/ghandhitechnology/trex</code>
+          <code title="cargo install --git https://github.com/ghandhitechnology/trex"><span class="sigil">$</span>cargo install --git <span class="url">https://github.com/ghandhitechnology/trex</span><span class="url-s">…/trex</span></code>
           <button class="copy" type="button" data-copy="cargo install --git https://github.com/ghandhitechnology/trex" aria-label="Copy install command">Copy</button>
         </div>
       </div>
@@ -117,9 +118,41 @@
           </div>
         </div>
         <div class="tmux-status" aria-hidden="true"><span>[api]</span><span class="win">0:zsh</span><span class="win cur">1:dev*</span><span class="spacer"></span><span class="focus-tag">trex</span><span class="host">"mbp"</span><span class="clock">00:00</span></div>
+        <div class="term-tag" aria-hidden="true">Real gameplay · 256×144</div>
       </div>
-      <div class="term-tag" aria-hidden="true">Real gameplay · 256×144</div>
     </div>
+    <script>
+    (function () {
+      // Size the game pane to a whole multiple of 256x144 device pixels before the first paint.
+      var term = document.querySelector('.term'), body = term.querySelector('.term-body'),
+        pane = term.querySelector('.pane-trex'), screen = pane.querySelector('.screen'),
+        border = term.querySelector('.tborder'), narrow = matchMedia('(max-width: 900px)'), seen = '';
+      function fit(w, h) {
+        var d = window.devicePixelRatio || 1, k = Math.max(1, Math.floor(Math.min(w * d / 256, h * d / 144) + 1e-6));
+        return { w: k * 256 / d, h: k * 144 / d };
+      }
+      window.trexHeroFit = function () {
+        var key = innerWidth + 'x' + innerHeight + '@' + (window.devicePixelRatio || 1), f;
+        if (key === seen) return;
+        seen = key;
+        if (narrow.matches) {
+          pane.style.width = pane.style.height = '';
+          f = fit(body.clientWidth, innerHeight * 0.62);
+          screen.style.setProperty('--gw', f.w + 'px');
+          screen.style.setProperty('--gh', f.h + 'px');
+          return;
+        }
+        screen.style.removeProperty('--gw');
+        screen.style.removeProperty('--gh');
+        var top = 0;
+        for (var el = term; el; el = el.offsetParent) top += el.offsetTop;
+        f = fit(body.clientWidth - 300 - border.offsetWidth, Math.max(innerHeight - top - 66, 300));
+        pane.style.width = f.w + 'px';
+        pane.style.height = f.h + 'px';
+      };
+      window.trexHeroFit();
+    })();
+    </script>
   </div>
 </section>
 
@@ -130,10 +163,10 @@
 <section class="sec" id="run">
   <div class="wrap">
     <div class="head-run" data-reveal>
-      <h2 data-px>From one grub to <em>seven thousand.</em></h2>
-      <div class="killboard" aria-label="7,941 kills by 14:43">
+      <h2 data-px>One grub. Then <em>7,799 more.</em></h2>
+      <div class="killboard" aria-label="7,800 kills by 14:39">
         <span class="kb-ico"></span><span class="kb-n" data-px>0</span>
-        <span class="kb-l">kills by 14:43 · LV 41 · one rex</span>
+        <span class="kb-l">kills by 14:39 · LV 41 · one rex</span>
       </div>
       <p>Weapons fire themselves. You steer, dash, and take one card per level. Every three minutes something large walks in.</p>
     </div>
@@ -251,12 +284,15 @@
           <p class="hub-desc"></p>
           <div class="stats">
             <div class="stat"><span>HP</span><span class="hearts"></span></div>
-            <div class="stat"><span>SPD</span><span class="bar"><i data-k="spd"></i></span></div>
-            <div class="stat"><span>PWR</span><span class="bar"><i data-k="pwr"></i></span></div>
-            <div class="stat"><span>RNG</span><span class="bar"><i data-k="rng"></i></span></div>
+            <div class="stat"><span>SPD</span><span class="bar" data-k="spd"></span></div>
+            <div class="stat"><span>PWR</span><span class="bar" data-k="pwr"></span></div>
+            <div class="stat"><span>RNG</span><span class="bar" data-k="rng"></span></div>
           </div>
-          <div class="hub-weapon"></div>
         </div>
+        <figure class="hub-range">
+          <div class="range-screen px-frame"><canvas class="range" width="128" height="72" aria-hidden="true"></canvas></div>
+          <figcaption class="hub-weapon"></figcaption>
+        </figure>
       </div>
       <p class="hub-keys kbd-hint" aria-hidden="true"><kbd>A</kbd> <kbd>D</kbd> PICK · CLICK A TILE</p>
     </div>
@@ -283,7 +319,7 @@
       </div>
     </div>
     <div class="armory" data-reveal>
-      <p class="armory-title"><b>Armory</b> All 54 items. Hover for details, click one to add it to your build.</p>
+      <p class="armory-title"><b>Armory</b><span>All 54 items. Hover for details, click one to add it to your build.</span><span class="legend" aria-hidden="true"><i class="common"></i>Common<i class="rare"></i>Rare<i class="epic"></i>Epic</span></p>
       <div class="armory-groups"></div>
     </div>
   </div>
@@ -326,7 +362,7 @@
   <div class="wrap controls">
     <div class="ctrl-copy" data-reveal>
       <h2 data-px>WASD. Space. <em>Done.</em></h2>
-      <p>Weapons aim and fire on their own. Your job is to not be where the monsters are. <code>P</code> pauses, <code>Q</code> quits and banks the run.</p>
+      <p><code>P</code> pauses. <code>Q</code> quits and banks the run.</p>
       <button class="btn btn--ghost btn--sm play-up" type="button">Play it in the pane up top</button>
       <details class="nerd">
         <summary>Why movement feels smooth in tmux</summary>
@@ -354,7 +390,7 @@
 <section class="sec" id="setup">
   <div class="wrap">
     <div class="head-setup" data-reveal>
-      <p class="prompt" aria-hidden="true"><span class="path">~</span> <span class="caret">❯</span> trex --setup<span class="cursor"></span></p>
+      <p class="prompt" aria-hidden="true"><span class="path">~</span> <span class="caret">❯</span> trex --help<span class="cursor"></span></p>
       <h2 data-px>Install, split, <em>play.</em></h2>
       <p>One Rust binary. Ghostty or Kitty to draw it. tmux if you want it next to your work, which you do.</p>
     </div>
@@ -365,7 +401,8 @@
             <h3>Install</h3>
             <p>Needs a Rust toolchain. Builds one binary called <code>trex</code>.</p>
             <div class="code"><div class="code-bar"><span>shell</span><button class="copy" type="button" data-copy="cargo install --git https://github.com/ghandhitechnology/trex">Copy</button></div>
-<pre><span class="s">$ </span>cargo install --git https://github.com/ghandhitechnology/trex</pre></div>
+<pre><span class="s">$ </span>cargo install --git \
+    https://github.com/ghandhitechnology/trex</pre></div>
           </div>
         </li>
         <li class="sstep" data-reveal style="--d:1">
@@ -386,6 +423,7 @@
           </div>
         </li>
       </ol>
+      <div class="setup-right">
       <ul class="reqs" data-reveal style="--d:1">
         <li><b>Terminal</b><span>Ghostty or Kitty. Anything that speaks kitty graphics with Unicode placeholders.</span></li>
         <li><b>tmux</b><span>3.3 or newer for <code>allow-passthrough</code>. Or skip tmux and run it bare.</span></li>
@@ -394,6 +432,22 @@
         <li><b>Save</b><span><code>trex/save.ron</code> in your data dir. Bones, unlocks, feats and a best time per dino.</span></li>
         <li><b>Sound</b><span>None. Play it on a call.</span></li>
       </ul>
+      <figure class="setup-shot" data-reveal style="--d:2">
+        <div class="mini px-frame">
+          <div class="mini-bar"><span>~/api</span><span class="mini-cmd">tmux split-window -h trex</span></div>
+          <div class="mini-body">
+            <pre class="mini-agent" aria-hidden="true"><span class="dim">❯</span> agent "fix the flaky ledger tests"
+<span class="c">●</span> Read src/ledger/refund.rs
+<span class="c">●</span> Edit src/ledger/refund.rs <span class="g">+18</span> <span class="r">-6</span>
+<span class="c">●</span> Bash cargo test ledger
+  <span class="b">████████████░░░░</span> 309/412</pre>
+            <i class="mini-split" aria-hidden="true"></i>
+            <img class="mini-shot" src="assets/shots/title.png" alt="The trex title screen in a tmux pane" loading="lazy" width="256" height="144">
+          </div>
+        </div>
+        <figcaption>Step 3, done. Your agent on the left, trex on the right.</figcaption>
+      </figure>
+      </div>
     </div>
   </div>
 </section>
@@ -401,6 +455,7 @@
 <!-- ============ FINAL CTA ============ -->
 <section class="final" id="play">
   <div class="final-bg" aria-hidden="true">
+    <div class="final-swarm"></div>
     <video data-lazy data-fit="cover" muted loop playsinline preload="none" poster="assets/video/late-chaos.png"><source data-src="assets/video/late-chaos.mp4" type="video/mp4"></video>
   </div>
   <div class="wrap final-in" data-reveal>
@@ -411,7 +466,7 @@
         <svg aria-hidden="true"><use href="#gh"/></svg><span>Get trex on GitHub</span>
       </a>
       <div class="install">
-        <code><span class="sigil">$</span>cargo install --git https://github.com/ghandhitechnology/trex</code>
+        <code title="cargo install --git https://github.com/ghandhitechnology/trex"><span class="sigil">$</span>cargo install --git <span class="url">https://github.com/ghandhitechnology/trex</span><span class="url-s">…/trex</span></code>
         <button class="copy" type="button" data-copy="cargo install --git https://github.com/ghandhitechnology/trex" aria-label="Copy install command">Copy</button>
       </div>
     </div>
@@ -425,7 +480,7 @@
     <div class="foot-in">
       <div>
         <img class="logo" src="assets/sprites/ui/logo.png" alt="trex" width="150" height="45">
-        <p>Rust, one binary, every pixel drawn in code.</p>
+        <p>Seven dinos, 54 items, five bosses. One more run.</p>
       </div>
       <ul class="foot-links">
         <li><a href="https://github.com/ghandhitechnology/trex" rel="noopener">GitHub</a></li>
@@ -446,7 +501,6 @@
 <canvas class="fx" aria-hidden="true"></canvas>
 <div class="tip" role="tooltip" aria-hidden="true"></div>
 
-<script src="js/pixelfont.js"></script>
 <script src="js/data.js"></script>
 <script src="js/main.js" defer></script>
 <script src="js/arena.js" defer></script>

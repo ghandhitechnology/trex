@@ -3,7 +3,7 @@
     256,
     144
   ],
-  "videoScale": 2,
+  "videoScale": 4,
   "reel": {
     "mp4": "video/reel.mp4",
     "poster": "video/reel.png",
