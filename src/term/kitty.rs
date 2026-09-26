@@ -13,10 +13,12 @@ use std::time::{Duration, Instant};
 
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD as B64;
+use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use flate2::Compression;
 use flate2::write::ZlibEncoder;
 
 use crate::render::canvas::Canvas;
+use crate::term::link::Link;
 
 /// Row/column diacritics from kitty's rowcolumn-diacritics.txt; index = number.
 pub const DIACRITICS: [char; 297] = [
@@ -423,6 +425,7 @@ pub struct Presenter {
     pid: u32,
     tmp: PathBuf,
     rgb: Vec<u8>,
+    link: Link,
 }
 
 impl Presenter {
@@ -441,6 +444,7 @@ impl Presenter {
             pid,
             tmp: std::env::temp_dir(),
             rgb: Vec::new(),
+            link: Link::new(),
         }
     }
 
@@ -535,55 +539,175 @@ impl Presenter {
         }
     }
 
-    /// Queue the escapes that replace the image with `cv`, scaled by `k`,
-    /// fit to `cols` x `rows` cells. False when the frame was dropped.
+    /// Queue the escapes that replace the image with `cv`, fit to `cols` x
+    /// `rows` cells and upscaled by `k`; inline frames go out at 1x unless
+    /// `fixed`. False when the frame was dropped.
     pub fn present(
         &mut self,
         out: &mut Vec<u8>,
         cv: &Canvas,
         k: usize,
+        fixed: bool,
         cols: u16,
         rows: u16,
     ) -> io::Result<bool> {
-        cv.scaled_rgb(k, &mut self.rgb);
-        let (w, h) = (cv.w as usize * k, cv.h as usize * k);
         let (cols, rows) = (cols.min(MAX_CELLS), rows.min(MAX_CELLS));
-        let base = format!("a=T,U=1,i={},f=24,s={w},v={h},c={cols},r={rows},q=2", self.id);
-
-        if self.medium != Medium::Direct {
-            self.poll_slots();
-            let unread = self.probe_start.is_some_and(|t| t.elapsed() > PROBE_TIME);
-            if !self.confirmed && !self.forced && unread {
-                self.fall_back();
-                return self.present(out, cv, k, cols, rows);
-            }
-            let i = self.next;
-            if self.slots[i].is_some() {
-                return Ok(false); // Terminal is behind; drop this frame.
-            }
-            let name = match self.write_slot(i) {
-                Ok(name) => name,
-                Err(_) if !self.forced => {
-                    self.fall_back();
-                    return self.present(out, cv, k, cols, rows);
-                }
-                Err(e) => return Err(e),
-            };
-            self.slots[i] = Some(Instant::now());
-            self.next = (i + 1) % RING;
-            self.probe_start.get_or_insert_with(Instant::now);
-            let t = if self.medium == Medium::Shm { 's' } else { 't' };
-            let control = format!("{base},t={t},S={}", self.rgb.len());
-            command(out, &control, B64.encode(name).as_bytes(), self.tmux);
-            return Ok(true);
+        if self.medium == Medium::Direct {
+            return self.present_direct(out, cv, k, fixed, cols, rows);
         }
 
+        cv.scaled_rgb(k, &mut self.rgb);
+        let (w, h) = (cv.w as usize * k, cv.h as usize * k);
+        self.poll_slots();
+        let unread = self.probe_start.is_some_and(|t| t.elapsed() > PROBE_TIME);
+        if !self.confirmed && !self.forced && unread {
+            self.fall_back();
+            return self.present(out, cv, k, fixed, cols, rows);
+        }
+        let i = self.next;
+        if self.slots[i].is_some() {
+            return Ok(false); // Terminal is behind; drop this frame.
+        }
+        let name = match self.write_slot(i) {
+            Ok(name) => name,
+            Err(_) if !self.forced => {
+                self.fall_back();
+                return self.present(out, cv, k, fixed, cols, rows);
+            }
+            Err(e) => return Err(e),
+        };
+        self.slots[i] = Some(Instant::now());
+        self.next = (i + 1) % RING;
+        self.probe_start.get_or_insert_with(Instant::now);
+        let t = if self.medium == Medium::Shm { 's' } else { 't' };
+        let control = format!(
+            "a=T,U=1,i={},f=24,s={w},v={h},c={cols},r={rows},q=2,t={t},S={}",
+            self.id,
+            self.rgb.len()
+        );
+        command(out, &control, B64.encode(name).as_bytes(), self.tmux);
+        Ok(true)
+    }
+
+    /// Inline frames, paced by the terminal's answers when it gives them.
+    fn present_direct(
+        &mut self,
+        out: &mut Vec<u8>,
+        cv: &Canvas,
+        k: usize,
+        fixed: bool,
+        cols: u16,
+        rows: u16,
+    ) -> io::Result<bool> {
+        let now = Instant::now();
+        if !self.link.ready(now) {
+            return Ok(false);
+        }
+        // Kitty's smooth upscale of a 1x frame keeps the link light.
+        let k = if fixed { k } else { 1 };
+        cv.scaled_rgb(k, &mut self.rgb);
+        let (w, h) = (cv.w as usize * k, cv.h as usize * k);
+        let answer = self.link.wants_replies();
+        if self.link.probe_due(now) {
+            command(out, &format!("a=q,i={},s=1,v=1,f=24,t=d", self.probe_id()), b"AAAA", self.tmux);
+        }
         let mut z = ZlibEncoder::new(Vec::with_capacity(self.rgb.len() / 8), Compression::fast());
         z.write_all(&self.rgb)?;
         let data = B64.encode(z.finish()?);
-        direct_chunks(out, &format!("{base},t=d,o=z"), data.as_bytes(), self.tmux);
+        let quiet = if answer { "" } else { ",q=2" };
+        let control = format!("a=T,U=1,i={},f=24,s={w},v={h},c={cols},r={rows},t=d,o=z{quiet}", self.id);
+        direct_chunks(out, &control, data.as_bytes(), self.tmux, !answer);
+        self.link.sent(Instant::now());
         Ok(true)
     }
+
+    /// Image id the round-trip probe asks about; never shown.
+    fn probe_id(&self) -> u32 {
+        1_000_000 + self.pid
+    }
+
+    /// A graphics answer from the terminal for image `id`.
+    pub fn answered(&mut self, id: u32, at: Instant) {
+        if id == self.id {
+            self.link.frame_answered(at);
+        } else if id == self.probe_id() {
+            self.link.probe_answered(at);
+        }
+    }
+
+    pub fn link_summary(&self) -> String {
+        self.link.summary()
+    }
+}
+
+/// Longest graphics answer we collect before deciding it is typing.
+const MAX_ANSWER: usize = 96;
+
+/// Pulls graphics answers (`ESC _ G <keys> ; <message> ESC \`) out of the
+/// key stream. crossterm reads one as Alt+_, plain characters, then Alt+\,
+/// so the digits in it would otherwise pick level-up cards.
+#[derive(Default)]
+pub struct AnswerFilter {
+    open: bool,
+    text: String,
+    held: Vec<Event>,
+}
+
+impl AnswerFilter {
+    /// Take one event. Events that are not part of an answer land in `pass`;
+    /// a finished answer returns its image id.
+    pub fn feed(&mut self, ev: Event, pass: &mut Vec<Event>) -> Option<u32> {
+        let key = match &ev {
+            Event::Key(k) if k.kind == KeyEventKind::Press => Some(*k),
+            _ => None,
+        };
+        let alt =
+            |k: KeyEvent, c: char| k.code == KeyCode::Char(c) && k.modifiers.contains(KeyModifiers::ALT);
+        if !self.open {
+            if key.is_some_and(|k| alt(k, '_')) {
+                self.open = true;
+                self.held.push(ev);
+            } else {
+                pass.push(ev);
+            }
+            return None;
+        }
+        match key {
+            Some(k) if alt(k, '\\') => {
+                self.open = false;
+                let id = answer_id(&self.text);
+                self.text.clear();
+                if id.is_some() {
+                    self.held.clear();
+                } else {
+                    pass.append(&mut self.held);
+                    pass.push(ev);
+                }
+                id
+            }
+            Some(KeyEvent { code: KeyCode::Char(c), modifiers, .. })
+                if !modifiers.intersects(KeyModifiers::ALT | KeyModifiers::CONTROL)
+                    && (!self.text.is_empty() || c == 'G')
+                    && self.text.len() < MAX_ANSWER =>
+            {
+                self.text.push(c);
+                self.held.push(ev);
+                None
+            }
+            _ => {
+                self.open = false;
+                self.text.clear();
+                pass.append(&mut self.held);
+                self.feed(ev, pass)
+            }
+        }
+    }
+}
+
+/// Image id in the body of a graphics answer, `G<keys>;<message>`.
+fn answer_id(text: &str) -> Option<u32> {
+    let (keys, _) = text.strip_prefix('G')?.split_once(';')?;
+    keys.split(',').find_map(|kv| kv.strip_prefix("i=")).and_then(|v| v.parse().ok())
 }
 
 /// Frames the terminal never picked up would outlive us (shared memory
@@ -597,12 +721,13 @@ impl Drop for Presenter {
 }
 
 /// Split base64 `data` into escapes of at most 4096 payload bytes; only the
-/// first carries `control`, the rest carry `m` and `q` alone.
-pub fn direct_chunks(out: &mut Vec<u8>, control: &str, data: &[u8], tmux: bool) {
+/// first carries `control`, the rest carry `m` and, when `quiet`, `q`.
+pub fn direct_chunks(out: &mut Vec<u8>, control: &str, data: &[u8], tmux: bool, quiet: bool) {
     let n = data.len().div_ceil(CHUNK);
+    let q = if quiet { ",q=2" } else { "" };
     for (i, chunk) in data.chunks(CHUNK).enumerate() {
         let more = u8::from(i + 1 < n);
-        let ctl = if i == 0 { format!("{control},m={more}") } else { format!("m={more},q=2") };
+        let ctl = if i == 0 { format!("{control},m={more}") } else { format!("m={more}{q}") };
         command(out, &ctl, chunk, tmux);
     }
 }
@@ -672,7 +797,7 @@ mod tests {
     fn direct_chunks_split_on_4096_with_more_flags() {
         let data = vec![b'A'; CHUNK * 2 + 10];
         let mut out = Vec::new();
-        direct_chunks(&mut out, "a=T,i=7", &data, false);
+        direct_chunks(&mut out, "a=T,i=7", &data, false, true);
         let s = String::from_utf8(out).unwrap();
         let parts: Vec<&str> = s.split("\x1b\\").filter(|p| !p.is_empty()).collect();
         assert_eq!(parts.len(), 3);
@@ -680,5 +805,47 @@ mod tests {
         assert!(parts[1].starts_with("\x1b_Gm=1,q=2;"));
         assert!(parts[2].starts_with("\x1b_Gm=0,q=2;"));
         assert_eq!(parts[0].len(), "\x1b_Ga=T,i=7,m=1;".len() + CHUNK);
+    }
+
+    fn key(c: char, modifiers: KeyModifiers) -> Event {
+        Event::Key(KeyEvent::new(KeyCode::Char(c), modifiers))
+    }
+
+    /// Events crossterm makes of `ESC _ <text> ESC \`.
+    fn answer(text: &str) -> Vec<Event> {
+        let mut evs = vec![key('_', KeyModifiers::ALT)];
+        for c in text.chars() {
+            let m = if c.is_ascii_uppercase() { KeyModifiers::SHIFT } else { KeyModifiers::NONE };
+            evs.push(key(c, m));
+        }
+        evs.push(key('\\', KeyModifiers::ALT));
+        evs
+    }
+
+    #[test]
+    fn answers_leave_the_key_stream() {
+        let mut f = AnswerFilter::default();
+        let mut pass = Vec::new();
+        let mut ids = Vec::new();
+        let mut evs = vec![key('w', KeyModifiers::NONE)];
+        evs.extend(answer("Gi=31;OK"));
+        evs.push(key('1', KeyModifiers::NONE));
+        evs.extend(answer("Gi=7;ENODATA:no data"));
+        for ev in evs {
+            ids.extend(f.feed(ev, &mut pass));
+        }
+        assert_eq!(ids, [31, 7]);
+        assert_eq!(pass, [key('w', KeyModifiers::NONE), key('1', KeyModifiers::NONE)]);
+    }
+
+    #[test]
+    fn typing_that_is_not_an_answer_passes_through() {
+        let mut f = AnswerFilter::default();
+        let mut pass = Vec::new();
+        let evs = [key('_', KeyModifiers::ALT), key('a', KeyModifiers::NONE), key('_', KeyModifiers::ALT)];
+        for ev in evs {
+            assert_eq!(f.feed(ev, &mut pass), None);
+        }
+        assert_eq!(pass, evs[..2]);
     }
 }
