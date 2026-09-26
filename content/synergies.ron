@@ -1,0 +1,122 @@
+#![enable(implicit_some)]
+// Named combos that switch on while every item in `needs` is held.
+// Format: content/README.md
+[
+    (
+        id: "fire_wheel",
+        name: "Fire Wheel",
+        desc: "Saws catch fire.",
+        needs: ["saw_ring", "hot_lead"],
+        upgrades: [
+            (weapon: "saw_ring", sprite: "fire_saw", count: 1, on_hit: [Burn(dps: 0.8, secs: 3.0)]),
+        ],
+    ),
+    (
+        id: "ball_lightning",
+        name: "Ball Lightning",
+        desc: "Rangs crackle and arc.",
+        needs: ["bone_rang", "static_coil"],
+        upgrades: [
+            (
+                weapon: "bone_rang",
+                sprite: "plasma_rang",
+                damage: 0.2,
+                on_hit: [Chain(jumps: 2, range: 55.0, damage: 0.5)],
+            ),
+        ],
+    ),
+    (
+        id: "cluster_mines",
+        name: "Cluster Mines",
+        desc: "Mines burst into shrapnel.",
+        needs: ["mine_layer", "powder_keg"],
+        upgrades: [
+            (weapon: "mine_layer", sprite: "cluster_mine", area: 0.3, on_end: Nova(count: 8, damage: 0.6)),
+        ],
+    ),
+    (
+        id: "driller",
+        name: "Driller",
+        desc: "Slugs become drills.",
+        needs: ["railgun", "drill_bit"],
+        upgrades: [
+            (weapon: "railgun", sprite: "drill_slug", damage: 0.6, rate: 0.3, pierce: 20),
+        ],
+    ),
+    (
+        id: "cryo_beam",
+        name: "Cryo Beam",
+        desc: "Beams freeze what they touch.",
+        needs: ["laser_eye", "frost_halo"],
+        upgrades: [
+            (weapon: "laser_eye", sprite: "ice_laser", count: 1, area: 0.3, on_hit: [Slow(amount: 0.7, secs: 2.0)]),
+        ],
+    ),
+    (
+        id: "swarm",
+        name: "Swarm",
+        desc: "Rockets come in swarms.",
+        needs: ["seeker_pod", "twin_barrel"],
+        upgrades: [
+            (weapon: "seeker_pod", sprite: "mini_missile", count: 3, damage: -0.25, rate: 0.2),
+        ],
+    ),
+    (
+        id: "extinction",
+        name: "Extinction",
+        desc: "Meteors grow huge.",
+        needs: ["meteor_call", "big_bones"],
+        upgrades: [
+            (weapon: "meteor_call", sprite: "big_meteor", count: 1, area: 0.8, damage: 0.4),
+        ],
+    ),
+    (
+        id: "tar_pit",
+        name: "Tar Pit",
+        desc: "The heat melts the floor to tar.",
+        needs: ["magma_core", "amber_resin"],
+        upgrades: [
+            (weapon: "magma_core", sprite: "tar", area: 0.35, on_hit: [Slow(amount: 0.55, secs: 0.8)]),
+        ],
+    ),
+    (
+        id: "porcupine",
+        name: "Porcupine",
+        desc: "Twice the quills. They pierce.",
+        needs: ["quill_burst", "thorn_hide"],
+        upgrades: [
+            (weapon: "quill_burst", sprite: "big_quill", count: 6, pierce: 2),
+        ],
+    ),
+    (
+        id: "pinball",
+        name: "Pinball",
+        desc: "Pellets ricochet wildly.",
+        needs: ["scattergun", "rubber_ball"],
+        upgrades: [
+            (weapon: "scattergun", sprite: "pinball", bounce: 3, damage: 0.2),
+        ],
+    ),
+    (
+        id: "napalm",
+        name: "Napalm",
+        desc: "Explosions leave fire.",
+        needs: ["hot_lead", "powder_keg"],
+        stats: [(stat: Area, mul: 0.15)],
+        triggers: [
+            (on: Hit, from: Explode, action: Burn(dps: 0.4, secs: 3.0)),
+        ],
+    ),
+    (
+        id: "thunder_dash",
+        name: "Thunder Dash",
+        desc: "Dashes call down lightning.",
+        needs: ["tesla_rod", "spark_plug"],
+        triggers: [
+            (on: Dash, action: Chain(jumps: 6, range: 80.0, damage: 1.2)),
+        ],
+        upgrades: [
+            (weapon: "tesla_rod", count: 1),
+        ],
+    ),
+]

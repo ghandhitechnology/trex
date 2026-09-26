@@ -40,6 +40,7 @@ pub fn draw_world(cv: &mut Canvas, w: &World, floor: Option<&Canvas>, dead: bool
         cv.blend_ellipse(x, y + 3, 2, 1, palette::INK, 90);
         cv.blit_centered(s.frame_at(g.age + g.pos.y * 0.05, 3.0), x, y - 1 + bob, Blit::default());
     }
+    crate::items::draw::under(cv, w);
 
     // Shadows first so no creature's shadow covers another creature.
     let mut bodies: Vec<(i32, Body)> = Vec::with_capacity(w.enemies.len() + 1);
@@ -117,6 +118,7 @@ pub fn draw_world(cv: &mut Canvas, w: &World, floor: Option<&Canvas>, dead: bool
         }
         cv.blit_centered(spr.frame_at(s.age, 12.0), x, y, Blit::default());
     }
+    crate::items::draw::over(cv, w);
 
     w.fx.draw_over(cv, cam);
 

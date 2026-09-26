@@ -116,13 +116,7 @@ pub fn level_up(cv: &mut Canvas, w: &World, o: &Offer, clock: f32) {
         cv.blend_ellipse(x + card_w / 2, y + 8 + icon.h * 2, icon.w - 2, 2, INK, 150);
         cv.blit_scaled(icon, ix, y + 6, 2);
 
-        let stacks = w.build.stacks(item);
-        let (tag, tag_c) = if stacks == 0 {
-            ("NEW".to_string(), palette::LIME)
-        } else {
-            (format!("X{}", stacks + 1), palette::GOLD)
-        };
-        font::draw_outlined(cv, x + card_w - 3 - font::width(&tag), y + 3, &tag, tag_c, INK);
+        crate::items::draw::card_tag(cv, content, &w.build, item, x, y, card_w);
 
         let mut ty = y + 12 + icon.h * 2;
         for line in font::wrap(&it.name, card_w - 6) {

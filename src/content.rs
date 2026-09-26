@@ -8,6 +8,7 @@ use serde::de::DeserializeOwned;
 use crate::enemies::EnemyDef;
 use crate::enemies::director::WavesDef;
 use crate::items::ItemDef;
+use crate::items::synergy::SynergyDef;
 use crate::meta::characters::CharacterDef;
 use crate::render::sprite::{SpriteId, bank};
 
@@ -15,12 +16,14 @@ const ITEMS: &str = include_str!("../content/items.ron");
 const ENEMIES: &str = include_str!("../content/enemies.ron");
 const CHARACTERS: &str = include_str!("../content/characters.ron");
 const WAVES: &str = include_str!("../content/waves.ron");
+const SYNERGIES: &str = include_str!("../content/synergies.ron");
 
 pub struct Content {
     pub items: Vec<ItemDef>,
     pub enemies: Vec<EnemyDef>,
     pub characters: Vec<CharacterDef>,
     pub waves: WavesDef,
+    pub synergies: Vec<SynergyDef>,
 }
 
 static CONTENT: OnceLock<Content> = OnceLock::new();
@@ -56,6 +59,7 @@ impl Content {
             enemies: parse("enemies.ron", ENEMIES)?,
             characters: parse("characters.ron", CHARACTERS)?,
             waves: parse("waves.ron", WAVES)?,
+            synergies: parse("synergies.ron", SYNERGIES)?,
         };
         c.resolve()?;
         Ok(c)
@@ -71,6 +75,7 @@ impl Content {
         for it in &mut self.items {
             it.sprite_id = sprite(&it.sprite, &format!("item `{}`", it.id))?;
         }
+        crate::items::resolve(&mut self.items, &mut self.synergies)?;
         for e in &mut self.enemies {
             let owner = format!("enemy `{}`", e.id);
             e.sprite_id = sprite(&e.sprite, &owner)?;

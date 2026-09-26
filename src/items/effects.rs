@@ -2,16 +2,19 @@
 //! processed together; actions can cause new events one generation deeper,
 //! capped by `MAX_DEPTH` so chain reactions stay bounded.
 
-use super::{Action, On, Stat, Trigger};
+use super::weapons::{self, Mine};
+use super::{Action, On, Source, Stat, StatMod};
 use crate::engine::Vec2;
 use crate::game::player;
-use crate::game::world::{Hit, World};
+use crate::game::world::World;
 use crate::render::palette;
 use crate::render::sprite::bank;
 
 /// Events from depth 0 (weapon) and depth 1 (first proc) can fire triggers.
 pub const MAX_DEPTH: u8 = 1;
 const EVENT_BUDGET: usize = 3000;
+/// Most burn damage per second on one enemy, as a ratio of Damage.
+const BURN_CAP: f32 = 2.5;
 
 #[derive(Clone, Copy, Debug)]
 pub struct GameEvent {
@@ -20,22 +23,24 @@ pub struct GameEvent {
     /// Enemy index for Hit/Crit/Kill.
     pub target: Option<usize>,
     pub depth: u8,
+    /// What dealt the hit, for Hit/Crit/Kill.
+    pub source: Source,
 }
 
 impl GameEvent {
     pub fn at(on: On, pos: Vec2, depth: u8) -> Self {
-        GameEvent { on, pos, target: None, depth }
+        GameEvent { on, pos, target: None, depth, source: Source::Main }
     }
 }
 
 #[derive(Clone, Debug)]
 pub struct ActiveTrigger {
-    pub def: Trigger,
+    pub def: super::Trigger,
     /// Seconds until it can fire again (for `Timer`, until it fires).
     pub cd: f32,
 }
 
-impl Trigger {
+impl super::Trigger {
     pub fn initial_cd(&self) -> f32 {
         if self.on == On::Timer { self.cooldown } else { 0.0 }
     }
@@ -48,7 +53,7 @@ pub fn tick(w: &mut World, dt: f32) {
         t.cd -= dt;
         if t.def.on == On::Timer && t.cd <= 0.0 {
             t.cd = t.def.cooldown.max(0.1);
-            let (chance, action) = (t.def.chance, t.def.action.clone());
+            let (chance, action) = (t.def.chance, t.def.action);
             if chance >= 1.0 || w.rng.chance(chance) {
                 let ev = GameEvent::at(On::Timer, w.player.pos, 0);
                 run(w, &action, &ev);
@@ -74,7 +79,10 @@ pub fn process(w: &mut World) {
             if t.def.on != ev.on || t.def.on == On::Timer || t.cd > 0.0 {
                 continue;
             }
-            let (chance, cooldown, action) = (t.def.chance, t.def.cooldown, t.def.action.clone());
+            if t.def.from.is_some_and(|f| f != ev.source) {
+                continue;
+            }
+            let (chance, cooldown, action) = (t.def.chance, t.def.cooldown, t.def.action);
             if chance < 1.0 && !w.rng.chance(chance) {
                 continue;
             }
@@ -84,7 +92,8 @@ pub fn process(w: &mut World) {
     }
 }
 
-fn run(w: &mut World, action: &Action, ev: &GameEvent) {
+/// Carry out one action for an event. Damage it deals is one generation deeper.
+pub fn run(w: &mut World, action: &Action, ev: &GameEvent) {
     let damage = w.stats.get(Stat::Damage);
     let area = w.stats.get(Stat::Area);
     let duration = w.stats.get(Stat::Duration);
@@ -92,7 +101,7 @@ fn run(w: &mut World, action: &Action, ev: &GameEvent) {
     match *action {
         Action::Burn { dps, secs } => {
             if let Some(e) = ev.target.and_then(|i| w.enemies.get_mut(i)).filter(|e| !e.dead) {
-                e.burn_dps = (e.burn_dps + dps * damage).min(damage * 8.0);
+                e.burn_dps = (e.burn_dps + dps * damage).min(damage * BURN_CAP);
                 e.burn_time = e.burn_time.max(secs * duration);
             }
         }
@@ -103,14 +112,7 @@ fn run(w: &mut World, action: &Action, ev: &GameEvent) {
             }
         }
         Action::Explode { radius, damage: ratio } => {
-            let r = radius * area;
-            for i in w.enemies_in(ev.pos, r) {
-                let knock = (w.enemies[i].pos - ev.pos).norm() * 90.0;
-                w.damage_enemy(i, Hit { damage: damage * ratio, knock, crit: false, depth, procs: true });
-            }
-            w.fx.ring(ev.pos, r, palette::EMBER);
-            w.fx.burst(ev.pos, &[palette::GOLD, palette::AMBER, palette::EMBER, palette::RED], 18, r * 3.0);
-            w.fx.shake(0.12);
+            weapons::blast(w, ev.pos, radius * area, damage * ratio, Source::Explode, depth, None);
         }
         Action::Nova { count, damage: ratio } => {
             let spark = bank().id("spark").expect("sprite `spark`");
@@ -118,6 +120,7 @@ fn run(w: &mut World, action: &Action, ev: &GameEvent) {
             for k in 0..count {
                 let a = base + k as f32 / count.max(1) as f32 * std::f32::consts::TAU;
                 player::spawn_shot(w, ev.pos, Vec2::from_angle(a), ratio, depth, spark);
+                tag_last(w, Source::Nova);
             }
         }
         Action::Chain { jumps, range, damage: ratio } => {
@@ -128,10 +131,7 @@ fn run(w: &mut World, action: &Action, ev: &GameEvent) {
                 let to = w.enemies[i].pos;
                 hit.push(w.enemies[i].uid);
                 w.fx.bolt(from, to);
-                w.damage_enemy(
-                    i,
-                    Hit { damage: damage * ratio, knock: Vec2::ZERO, crit: false, depth, procs: true },
-                );
+                weapons::hit(w, i, damage * ratio, Vec2::ZERO, Source::Chain, depth, None);
                 from = to;
             }
         }
@@ -150,6 +150,7 @@ fn run(w: &mut World, action: &Action, ev: &GameEvent) {
                     None => Vec2::from_angle(w.rng.angle()),
                 };
                 player::spawn_shot(w, pos, dir, ratio, depth, shot);
+                tag_last(w, Source::Volley);
             }
         }
         Action::Shockwave { radius, force } => {
@@ -158,8 +159,60 @@ fn run(w: &mut World, action: &Action, ev: &GameEvent) {
                 let e = &mut w.enemies[i];
                 e.push += (e.pos - ev.pos).norm() * force;
             }
-            w.fx.ring(ev.pos, r, palette::ICE);
+            let color = if force < 0.0 { palette::GRAPE } else { palette::ICE };
+            w.fx.ring(ev.pos, r, color);
         }
         Action::Heal { amount } => w.heal(amount),
+        Action::Strike { count, radius, damage: ratio } => {
+            let rock = bank().id("meteor").expect("sprite `meteor`");
+            weapons::rain(w, count, radius * area, damage * ratio, None, depth, rock);
+        }
+        Action::Chill { radius, amount, secs } => {
+            let r = radius * area;
+            for i in w.enemies_in(ev.pos, r) {
+                let e = &mut w.enemies[i];
+                e.slow = e.slow.max(amount.clamp(0.0, 0.85));
+                e.slow_time = e.slow_time.max(secs * duration);
+                e.flash = 0.06;
+            }
+            w.fx.ring(ev.pos, r, palette::CYAN);
+            w.fx.burst(ev.pos, &[palette::ICE, palette::CYAN, palette::BONE], 30, r * 2.5);
+        }
+        Action::Shield { secs } => {
+            let t = secs * duration;
+            w.player.invuln = w.player.invuln.max(t);
+            w.gear.shield = w.gear.shield.max(t);
+            w.fx.ring(w.player.pos, 16.0, palette::SKY);
+        }
+        Action::Buff { stat, add, mul, secs } => {
+            weapons::buff(w, StatMod { stat, add, mul }, secs * duration);
+            let pos = w.player.pos;
+            w.fx.burst(pos, &[palette::GOLD, palette::CREAM], 16, 90.0);
+        }
+        Action::Mines { count, radius, damage: ratio } => {
+            let sprite = bank().id("mine").expect("sprite `mine`");
+            for k in 0..count {
+                let a = k as f32 / count.max(1) as f32 * std::f32::consts::TAU;
+                let pos = w.arena.clamp(ev.pos + Vec2::from_angle(a) * 20.0, 4.0);
+                let life = 8.0 * duration;
+                let mine = Mine {
+                    pos,
+                    arm: 0.3,
+                    life,
+                    radius: radius * area,
+                    damage: damage * ratio,
+                    weapon: None,
+                    depth,
+                    sprite,
+                };
+                weapons::place_mine(w, mine);
+            }
+        }
+    }
+}
+
+fn tag_last(w: &mut World, source: Source) {
+    if let Some(s) = w.shots.last_mut() {
+        s.tag.source = source;
     }
 }

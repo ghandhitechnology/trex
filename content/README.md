@@ -9,11 +9,14 @@ every data change.
 | file | holds |
 |------|-------|
 | `items.ron` | level-up items |
+| `synergies.ron` | named item combos |
 | `enemies.ron` | enemy types |
 | `characters.ron` | playable characters |
 | `waves.ron` | the wave director |
 
-Fields marked *optional* can be left out.
+Fields marked *optional* can be left out. `items.ron` and `synergies.ron`
+start with `#![enable(implicit_some)]`, so optional values are written
+without `Some(...)`.
 
 ## Sprites
 
@@ -74,7 +77,8 @@ A trigger runs an action when an event happens:
 ```
 
 `chance` (optional, default 1) and `cooldown` (optional, seconds, default 0)
-limit how often it fires.
+limit how often it fires. `from` (optional) limits `Hit`, `Crit` and `Kill`
+to one damage source: `(on: Hit, from: Explode, action: Burn(...))`.
 
 | `on` | fires when | position |
 |------|------------|----------|
@@ -85,17 +89,27 @@ limit how often it fires.
 | `Hurt` | the player loses HP | player |
 | `LevelUp` | the player takes a level-up item | player |
 | `Timer` | every `cooldown` seconds | player |
+| `Active` | the player presses Space; needs a `cooldown` | player |
+
+Sources for `from`: `Main` (the character's weapon), `Gun`, `Orbit`, `Zap`,
+`Beam`, `Mine`, `Aura`, `Meteor` (item weapons), and `Explode`, `Nova`,
+`Chain`, `Volley` (actions).
 
 | action | effect |
 |--------|--------|
-| `Burn(dps, secs)` | sets the hit enemy on fire; `dps` is a ratio of Damage; stacks add |
+| `Burn(dps, secs)` | sets the hit enemy on fire; `dps` is a ratio of Damage; stacks add up to 2.5x Damage |
 | `Slow(amount, secs)` | slows the hit enemy by `amount` (0..0.85) |
 | `Explode(radius, damage)` | damages every enemy in the radius |
 | `Nova(count, damage)` | fires `count` projectiles in a ring |
 | `Chain(jumps, range, damage)` | lightning jumping between nearby enemies |
 | `Volley(count, damage)` | fires `count` extra shots at the nearest enemies |
-| `Shockwave(radius, force)` | pushes enemies away |
+| `Shockwave(radius, force)` | pushes enemies away; negative `force` pulls |
 | `Heal(amount)` | restores HP (integer, half hearts) |
+| `Strike(count, radius, damage)` | drops meteors on random nearby enemies |
+| `Chill(radius, amount, secs)` | slows every enemy in the radius |
+| `Shield(secs)` | the player can't be hurt |
+| `Buff(stat, add, mul, secs)` | temporary stat modifier on top of the final stats |
+| `Mines(count, radius, damage)` | scatters mines around the event |
 
 Rules that make synergies work without code:
 
@@ -124,11 +138,77 @@ Rules that make synergies work without code:
     triggers: [                 // optional
         (on: Kill, chance: 0.3, action: Explode(radius: 18.0, damage: 0.8)),
     ],
+    weapon: (...),              // optional, see below
 )
 ```
 
-Level-ups offer three distinct items weighted by rarity (10 / 5 / 2),
-skipping maxed and locked ones.
+An item is a **weapon** if it has `weapon`, an **active** if it has an
+`Active` trigger (write "Space: ..." in its `desc`), and a **passive**
+otherwise. A build holds at most 4 weapons and 2 actives; held ones can still
+stack.
+
+Level-ups offer three distinct items, skipping maxed and locked ones. Weights:
+
+- rarity: Common 10, Rare 4 rising to 8, Epic 1 rising to 4 (+0.2 and +0.12
+  per item taken this run)
+- x1.4 for items already held, x2 for an item that completes a synergy
+- x2.5 for weapons while none is held, and one card is always a weapon then
+
+### Weapons
+
+```ron
+weapon: (
+    kind: Orbit(radius: 22.0, spin: 3.6),
+    sprite: "saw",      // projectile, blade, mine or meteor
+    damage: 0.4,        // ratio of Damage per hit
+    rate: 2.0,          // optional, attacks per second, default 1
+    count: 2,           // optional, default 1
+    on_hit: [],         // optional: actions at every enemy hit
+    on_end: Nova(count: 6, damage: 0.5), // optional
+)
+```
+
+| `kind` | does | `rate` means | `on_end` runs |
+|--------|------|--------------|---------------|
+| `Gun(arc, speed, range, pierce, bounce, motion)` | `count` shots in an `arc`-degree fan at the nearest enemy; 360 fires all around. `speed`/`range` multiply ShotSpeed/Range. `motion`: `Straight`, `Homing`, `Boomerang`. All fields optional | volleys/s | where a shot ends |
+| `Orbit(radius, spin)` | `count` blades circle the player, `spin` rad/s | hits/s on one enemy | never |
+| `Zap(jumps, range)` | `count` lightning bolts from the player that jump | zaps/s | at the last enemy |
+| `Beam(length, width)` | `count` instant lines at the nearest enemies | beams/s | at the far end |
+| `Mine(radius, secs)` | `count` mines at the player's feet; blow up on touch or after `secs` | drops/s | where it blew |
+| `Aura(radius, slow)` | hurts (if `damage` > 0) and slows everything near the player | pulses/s | never |
+| `Meteor(radius)` | `count` rocks fall on random nearby enemies | calls/s | where it lands |
+
+Beams and auras take their colors from their sprite: the most used color is
+the body, the second the highlight (see the swatches in `src/items/sprites.rs`).
+
+Stats every weapon uses: Damage, FireRate (rate scales by FireRate over the
+character's base), Shots (+count, except auras), Area (radii), Duration (mine
+life), Crit. Guns also use every projectile stat. Weapon hits fire `Hit`,
+`Crit` and `Kill` like the main weapon. Each stack past the first adds +10%
+damage; stacks 2 and 4 add +1 count (auras grow 15% per stack instead).
+
+## synergies.ron
+
+A synergy switches on while every item in `needs` is held. It shows a
+banner when it forms and a COMBO tag on the card that completes it.
+
+```ron
+(
+    id: "fire_wheel",
+    name: "Fire Wheel",
+    desc: "Saws catch fire.",
+    needs: ["saw_ring", "hot_lead"],
+    stats: [],                  // optional, applied once
+    triggers: [],               // optional, added once
+    upgrades: [                 // optional: changes to a needed item's weapon
+        (weapon: "saw_ring", sprite: "fire_saw", count: 1, on_hit: [Burn(dps: 0.8, secs: 3.0)]),
+    ],
+)
+```
+
+Upgrade fields, all optional except `weapon`: `sprite` (new look), `count`,
+`damage` / `area` / `rate` (multiplier bonus, 0.5 is +50%), `pierce`,
+`bounce`, `on_hit` (added), `on_end` (replaces).
 
 ## enemies.ron
 
