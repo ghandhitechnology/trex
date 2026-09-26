@@ -617,37 +617,97 @@ pub const SPRITES: &[SpriteDef] = &[
         ],
     },
     SpriteDef {
+        name: "stego_attack",
+        outline: true,
+        frames: &[
+            &[
+                ".....H........", //
+                ".H...hH..H....", //
+                "..h..hH.hH....", //
+                "..hH.hH.hH....", //
+                "H.hH.hHhhH....", //
+                "hPPPPPPPPPP...", //
+                "hPPPPPPPPPPPP.", //
+                ".PuPPPPPPPPkPP", //
+                "..uPPPPPPPPPPP", //
+                "..uPHHHHHHPu..", //
+                "..uuPPPPPPuu..", //
+                "..uu.uu.uu.uu.", //
+                "..nn.nn.nn.nn.", //
+                "..............", //
+            ],
+            &[
+                "..............", //
+                ".....H........", //
+                "..H..hH.H.....", //
+                "..hH.hH.hH....", //
+                "..hH.hHhhH....", //
+                "H.PPPPPPPPP...", //
+                "PPPPPPPPPPPPP.", //
+                ".PuPPPPPPPPkPP", //
+                "P.uPPPPPPPPPPP", //
+                "..uPHHHHHHPu..", //
+                "..uuPPPPPPuu..", //
+                "..uu.uu.uu.uu.", //
+                "..nn.nn.nn.nn.", //
+                "..............", //
+            ],
+        ],
+    },
+    SpriteDef {
+        name: "stego_dash",
+        outline: true,
+        frames: &[
+            &[
+                "..............", //
+                "..............", //
+                "H.............", //
+                "hH.....h..h...", //
+                ".P.h..hH.hH...", //
+                ".PhH.hHhhH....", //
+                "..PPPPPPPPP...", //
+                ".PPPPPPPPPPPP.", //
+                "..uPPPPPPPPPPP", //
+                "..uPPPPPPPPkPP", //
+                "..uPHHHHHHPPP.", //
+                ".uu......uu...", //
+                "nn........nn..", //
+                "..............", //
+            ],
+        ],
+    },
+    SpriteDef {
         name: "spino",
         outline: true,
         frames: &[
             &[
-                "....a.a.......", //
-                "...aoaoa......", //
-                "..aoaoaoa.....", //
-                "..aoaoaoa.NNN.", //
-                "..NbbbbbbNbbbN", //
-                ".NbbbbbbbbbwkN", //
-                "NbbbBBBbbbbbbb", //
-                "Nb.bBBBbbbIkIk", //
-                "N...bBBbbN....", //
-                "....NbBbN.....", //
-                "....NNbbN.....", //
+                "...a.a........", //
+                "..oaoao.......", //
+                ".aoaoaoa.BB...", //
+                ".aoaoaoabwkbbB", //
+                ".aoaoaoabbNNNb", //
+                ".bbbbbbbbbbbb.", //
+                "bbbbbbbbbbN...", //
+                ".NNbbbbbbBb...", //
+                "...NbbbbBBb...", //
+                "...NNbbBB.....", //
+                "....NNbbbb....", //
                 "....NN..bb....", //
                 "...NNN..bbb...", //
                 "..............", //
             ],
             &[
-                "....a.a.......", //
-                "...aoaoa......", //
-                "..aoaoaoa.....", //
-                "..aoaoaoa.NNN.", //
-                "..NbbbbbbNbbbN", //
-                ".NbbbbbbbbbwkN", //
-                "NbbbBBBbbbbbbb", //
-                "Nb.bBBBbbbIkIk", //
-                "N...bBBbbN....", //
-                "....NbBbN.....", //
-                "....NNbbN.....", //
+                "...a.a........", //
+                "..oaoao.......", //
+                ".aoaoaoa.BB...", //
+                ".aoaoaoabwkbbB", //
+                ".aoaoaoabbNNNb", //
+                ".bbbbbbbbbbbb.", //
+                "bbbbbbbbbbN...", //
+                ".NNbbbbbbBb...", //
+                "...NbbbbBBb...", //
+                "...NNbbBB.....", //
+                "....NNbbbb....", //
                 ".....Nbbb.....", //
                 ".....NNbbb....", //
                 "..............", //
@@ -659,35 +719,95 @@ pub const SPRITES: &[SpriteDef] = &[
         outline: true,
         frames: &[
             &[
-                "....a.a.......", //
-                "...aoaoa......", //
-                "..aoaoaoa.....", //
-                "..aoaoaoa.NNN.", //
-                "..NbbbbbbNbbbN", //
-                ".NbbbbbbbbbwkN", //
-                "NbbbBBBbbbbbbb", //
-                "Nb.bBBBbbbIkIk", //
-                "N...bBBbbN....", //
-                "....NbBbN.....", //
-                "....NNbbN.....", //
+                "...a.a........", //
+                "..oaoao.......", //
+                ".aoaoaoa.BB...", //
+                ".aoaoaoabwkbbB", //
+                ".aoaoaoabbNNNb", //
+                ".bbbbbbbbbbbb.", //
+                "bbbbbbbbbbN...", //
+                ".NNbbbbbbBb...", //
+                "...NbbbbBBb...", //
+                "...NNbbBB.....", //
+                "....NNbbbb....", //
                 "....NN..bb....", //
                 "...NNN..bbb...", //
                 "..............", //
             ],
             &[
                 "..............", //
-                "....a.a.......", //
-                "...aoaoa......", //
-                "..aoaoaoa.....", //
-                "..aoaoaoa.NNN.", //
-                "..NbbbbbbNbbbN", //
-                ".NbbbbbbbbbbbN", //
-                "NbbbBBBbbbbbbb", //
-                "Nb.bBBBbbbIkIk", //
-                "N...bBBbbN....", //
-                "....NbBbN.....", //
+                "...a.a........", //
+                "..oaoao.......", //
+                ".aoaoaoa.BB...", //
+                ".aoaoaoabNNbbB", //
+                ".aoaoaoabbNNNb", //
+                ".bbbbbbbbbbbb.", //
+                "bbbbbbbbbbN...", //
+                ".NNbbbbbbBb...", //
+                "...NbbbbBBb...", //
+                "...NNbbBB.....", //
                 "....NN..bb....", //
                 "...NNN..bbb...", //
+                "..............", //
+            ],
+        ],
+    },
+    SpriteDef {
+        name: "spino_attack",
+        outline: true,
+        frames: &[
+            &[
+                "...a.a........", //
+                "..oaoao......B", //
+                ".aoaoaoa.BBBBb", //
+                ".aoaoaoabwkbb.", //
+                ".aoaoaoabbcc.i", //
+                ".bbbbbbbbbbc..", //
+                "bbbbbbbbbbbbbb", //
+                ".NNbbbbbbBb...", //
+                "...NbbbbBBb...", //
+                "...NNbbBB.....", //
+                "....NNbbbb....", //
+                "....NN..bb....", //
+                "...NNN..bbb...", //
+                "..............", //
+            ],
+            &[
+                "...a.a........", //
+                "..oaoao.......", //
+                ".aoaoaoa.BBBBB", //
+                ".aoaoaoabwkbb.", //
+                ".aoaoaoabbcc..", //
+                ".bbbbbbbbbbbbb", //
+                "bbbbbbbbbbN...", //
+                ".NNbbbbbbBb...", //
+                "...NbbbbBBb...", //
+                "...NNbbBB.....", //
+                "....NNbbbb....", //
+                "....NN..bb....", //
+                "...NNN..bbb...", //
+                "..............", //
+            ],
+        ],
+    },
+    SpriteDef {
+        name: "spino_dash",
+        outline: true,
+        frames: &[
+            &[
+                "..............", //
+                "..............", //
+                "..............", //
+                ".a..a.........", //
+                ".oaooaoo......", //
+                ".ooaooao.BB...", //
+                "bbbbbbbbbwkbbB", //
+                "bbbbbbbbbbNNNb", //
+                ".NNbbbbbbbbbb.", //
+                "...NNbbbBBbN..", //
+                "..NNNbbBB.....", //
+                "NNN...bbb.....", //
+                ".......bbb....", //
                 "..............", //
             ],
         ],
@@ -764,6 +884,66 @@ pub const SPRITES: &[SpriteDef] = &[
                 "xx..ZZZxxY....", //
                 "....zz..ZZ....", //
                 "...zzz..ZZZ...", //
+                "..............", //
+            ],
+        ],
+    },
+    SpriteDef {
+        name: "pachy_attack",
+        outline: true,
+        frames: &[
+            &[
+                "..............", //
+                "........wwww..", //
+                ".......wpwwww.", //
+                ".......wwppwpw", //
+                "......ZxxxxxxZ", //
+                "......xxxxwkxx", //
+                "......xxxxxxxY", //
+                "...xZZxxxxc..p", //
+                ".xxZZZxxxZxxY.", //
+                "xx..ZZZxxY....", //
+                "....ZZZZZ.....", //
+                "....zz..ZZ....", //
+                "...zzz..ZZZ...", //
+                "..............", //
+            ],
+            &[
+                "..............", //
+                ".......wwww...", //
+                "......wpwwww..", //
+                "......wwppwpw.", //
+                ".....ZxxxxxxZ.", //
+                ".....xxxxwkxx.", //
+                ".....xxxxxxxY.", //
+                "...xZZxxxxc...", //
+                ".xxZZZxxxZxY..", //
+                "xx..ZZZxxY....", //
+                "....ZZZZZ.....", //
+                "....zz..ZZ....", //
+                "...zzz..ZZZ...", //
+                "..............", //
+            ],
+        ],
+    },
+    SpriteDef {
+        name: "pachy_dash",
+        outline: true,
+        frames: &[
+            &[
+                "..............", //
+                "..............", //
+                "..............", //
+                "..............", //
+                "..........www.", //
+                ".........Zwpww", //
+                "...xZZxxxxwwpw", //
+                ".xxZZZxxwkZwpw", //
+                "xx..ZZZxxxxZw.", //
+                "....ZZZxxxY...", //
+                "...ZZZZZZ.....", //
+                "..zz.....ZZ...", //
+                "zzz.......ZZZ.", //
                 "..............", //
             ],
         ],
