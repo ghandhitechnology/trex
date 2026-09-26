@@ -1,26 +1,71 @@
 {
-  "native": [256, 144],
-  "videoScale": 4,
-  "reel": {"mp4": "video/reel.mp4", "webm": "video/reel.webm", "poster": "video/reel.png", "seconds": 42,
-    "shows": "Title, early game with a level-up, Mire Queen, Ptera lightning build, Bone Colossus, Sandmaw, Bone Dunes biome shift, Stego horde, 14-minute chaos"},
+  "native": [
+    256,
+    144
+  ],
+  "videoScale": 2,
+  "reel": {
+    "mp4": "video/reel.mp4",
+    "poster": "video/reel.png",
+    "seconds": 29,
+    "shows": "14-minute swarm, Ptera lightning build, Sandmaw with a level-up, Mire Queen, Bone Colossus, back to the swarm"
+  },
   "clips": [
-    {"id": "title", "seconds": 8, "hero": "rex", "shows": "Animated title screen: TREX logo, Rex idle, PRESS SPACE, controls line"},
-    {"id": "early", "seconds": 15, "hero": "rex", "shows": "0:23-0:35, sparse arena, first weapons, level-up card pick (Bone Storm / Cold Snap / Iron Jaw)"},
-    {"id": "levelup", "seconds": 7, "hero": "rex", "shows": "14:40 swarm then the level-up screen held (Raptor Legs / Amber Resin / Bone Rang)"},
-    {"id": "boss-mire-queen", "seconds": 14, "hero": "rex", "shows": "3:05 Mire Queen boss bar, slime queen spawns, pink bullet rings, lit arena circle"},
-    {"id": "boss-colossus", "seconds": 13, "hero": "rex", "shows": "6:08 Bone Colossus charging, explosion rings, cyan shot spray"},
-    {"id": "lightning-build", "seconds": 12, "hero": "ptera", "shows": "10:00 Bone Dunes banner, dense mid-late build, meteors and chain lightning"},
-    {"id": "boss-sandmaw", "seconds": 14, "hero": "spino", "shows": "12:25 Sandmaw fight, level-up cards, Spore Marsh biome banner, floor recolor"},
-    {"id": "biome-shift", "seconds": 12, "hero": "rex", "shows": "10:00 Storm Wraith dies, Bone Dunes banner, horde of brutes and slimes rolls in"},
-    {"id": "late-chaos", "seconds": 9.5, "hero": "rex", "shows": "14:30 level 41, hundreds of enemies, damage numbers everywhere, 7600+ kills"}
+    {
+      "id": "early",
+      "seconds": 15,
+      "hero": "rex",
+      "shows": "0:23-0:35, sparse arena, first weapons, level-up card pick (Bone Storm / Cold Snap / Iron Jaw)"
+    },
+    {
+      "id": "boss-mire-queen",
+      "seconds": 14,
+      "hero": "rex",
+      "shows": "3:05 Mire Queen boss bar, slime queen spawns, pink bullet rings, lit arena circle"
+    },
+    {
+      "id": "boss-colossus",
+      "seconds": 13,
+      "hero": "rex",
+      "shows": "6:08 Bone Colossus charging, explosion rings, cyan shot spray"
+    },
+    {
+      "id": "lightning-build",
+      "seconds": 12,
+      "hero": "ptera",
+      "shows": "10:00 Bone Dunes banner, dense mid-late build, meteors and chain lightning"
+    },
+    {
+      "id": "boss-sandmaw",
+      "seconds": 14,
+      "hero": "spino",
+      "shows": "12:25 Sandmaw fight, level-up cards, Spore Marsh biome banner, floor recolor"
+    },
+    {
+      "id": "late-chaos",
+      "seconds": 9.5,
+      "hero": "rex",
+      "shows": "14:30 level 41, hundreds of enemies, damage numbers everywhere, 7600+ kills"
+    }
   ],
   "shots": {
-    "title": "shots/title.png", "hub_heroes": "shots/hub_heroes.png", "hub_locked": "shots/hub_locked.png",
-    "hub_shop": "shots/hub_shop.png", "hub_items": "shots/hub_items.png", "hub_feats": "shots/hub_feats.png",
-    "levelup": "shots/levelup.png", "paused": "shots/paused.png", "dying": "shots/dying.png", "dead": "shots/dead.png"
+    "title": "shots/title.png",
+    "hub_heroes": "shots/hub_heroes.png",
+    "hub_locked": "shots/hub_locked.png",
+    "hub_shop": "shots/hub_shop.png",
+    "hub_items": "shots/hub_items.png",
+    "hub_feats": "shots/hub_feats.png",
+    "levelup": "shots/levelup.png",
+    "paused": "shots/paused.png",
+    "dying": "shots/dying.png",
+    "dead": "shots/dead.png",
+    "paused_native": "video/paused.png"
   },
   "sprites": "sprites/sprites.json",
-  "sheet": "sprites/sheet@4x.png",
-  "font": {"glyphs": "font/font.json", "atlas": "font/font-atlas.png"},
-  "palette": "palette.css"
+  "font": {
+    "glyphs": "font/font.json",
+    "atlas": "font/font-atlas.png"
+  },
+  "palette": "palette.css",
+  "atlas": "sprites/atlas.png"
 }
