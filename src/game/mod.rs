@@ -32,6 +32,8 @@ pub struct Controls {
     pub pause: bool,
     /// Q.
     pub quit: bool,
+    /// H: bank the run and go home from pause.
+    pub home: bool,
     pub yes: bool,
     pub no: bool,
     /// Direction edges for menus (WASD or arrows).
@@ -248,6 +250,10 @@ impl Game {
             Scene::Paused => {
                 if c.pause || c.confirm {
                     self.scene = Scene::Playing;
+                } else if c.home {
+                    self.finish_run();
+                    self.world = None;
+                    self.scene = Scene::Hub(Hub::new(self.character));
                 }
             }
             Scene::LevelUp(offer) => {

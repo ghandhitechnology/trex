@@ -142,6 +142,7 @@ impl Input {
             KeyCode::Char(c) => match c.to_ascii_lowercase() {
                 'p' => e.pause = true,
                 'q' => e.quit = true,
+                'h' => e.home = true,
                 'y' => e.yes = true,
                 'n' => e.no = true,
                 '1'..='9' => e.pick = c.to_digit(10).map(|n| n as u8),
