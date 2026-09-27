@@ -2,6 +2,7 @@
 //! enhancement, and a restore path that runs on normal exit, panic, and signals.
 
 pub mod input;
+pub mod keystate;
 pub mod kitty;
 pub mod link;
 

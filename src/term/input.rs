@@ -6,14 +6,17 @@
 //! to bridge the OS repeat delay, short after a repeat. The delay and interval
 //! are learned from the repeat stream. Pressing another key (Space to dash)
 //! ends a held direction's repeat stream, so the direction stays held for as
-//! long as that key's stream lasts. If the terminal sends kitty-protocol
-//! release events, holds become exact.
+//! long as that key's stream lasts; a second direction does the same for the
+//! first, so diagonals hold. If the terminal sends kitty-protocol release
+//! events, or the OS confirms the key is physically down (macOS, not over SSH),
+//! holds become exact.
 
 use std::time::{Duration, Instant};
 
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 
 use crate::game::Controls;
+use crate::term::keystate;
 
 const UP: usize = 0;
 const DOWN: usize = 1;
@@ -36,6 +39,10 @@ struct Hold {
     first_gap: Duration,
     /// Held when the current cover key went down.
     covered: bool,
+    /// When the hold began, so the later of two opposite directions wins.
+    since: Option<Instant>,
+    /// The OS saw this key down when it was pressed, so it also sees the release.
+    physical: Option<KeyCode>,
 }
 
 pub struct Input {
@@ -45,6 +52,8 @@ pub struct Input {
     cover: Option<(KeyCode, Hold)>,
     /// Kitty keyboard protocol detected: holds end on release events.
     precise: bool,
+    /// Physical key state from the OS, if it has one.
+    keys: fn(KeyCode) -> Option<bool>,
     delay: Duration,
     interval: Duration,
     edges: Controls,
@@ -60,6 +69,7 @@ impl Default for Input {
             holds: [Hold::default(); 4],
             cover: None,
             precise: false,
+            keys: keystate::down,
             delay: Duration::from_millis(450),
             interval: Duration::from_millis(40),
             edges: Controls::default(),
@@ -84,10 +94,6 @@ fn direction(code: KeyCode) -> Option<usize> {
         KeyCode::Right => Some(RIGHT),
         _ => None,
     }
-}
-
-fn opposite(d: usize) -> usize {
-    d ^ 1
 }
 
 /// A key counts as held until a window after its last event: the initial
@@ -128,7 +134,8 @@ impl Input {
             return;
         }
         if let Some(d) = dir {
-            self.press_direction(d, now);
+            self.press_cover(k.code, now);
+            self.press_direction(d, k.code, now);
             return;
         }
         self.press_cover(k.code, now);
@@ -152,7 +159,7 @@ impl Input {
         }
     }
 
-    fn press_direction(&mut self, d: usize, now: Instant) {
+    fn press_direction(&mut self, d: usize, code: KeyCode, now: Instant) {
         let fresh = !self.held(d, now);
         // Menus step on every tap, and about 7 times a second while held.
         if fresh || self.nav_at[d].is_none_or(|t| now.duration_since(t) >= NAV_REPEAT) {
@@ -166,8 +173,8 @@ impl Input {
             }
         }
         if fresh {
-            self.holds[d] = Hold { last: Some(now), ..Hold::default() };
-            self.holds[opposite(d)] = Hold::default();
+            let physical = ((self.keys)(code) == Some(true)).then_some(code);
+            self.holds[d] = Hold { last: Some(now), since: Some(now), physical, ..Hold::default() };
             return;
         }
         let h = &mut self.holds[d];
@@ -209,6 +216,9 @@ impl Input {
         if h.last.is_none() {
             return false;
         }
+        if let Some(code) = h.physical {
+            return (self.keys)(code) == Some(true);
+        }
         self.precise
             || live(h, now, self.delay, self.interval)
             || h.covered && self.cover.is_some_and(|(_, c)| live(&c, now, self.delay, self.interval))
@@ -222,10 +232,22 @@ impl Input {
 
     /// Controls for the next tick. Button edges are handed out once.
     pub fn controls(&mut self, now: Instant) -> Controls {
-        let axis = |neg: bool, pos: bool| f32::from(u8::from(pos)) - f32::from(u8::from(neg));
+        let held: [bool; 4] = std::array::from_fn(|d| self.held(d, now));
+        for (h, held) in self.holds.iter_mut().zip(held) {
+            // A released physical key must not look held when it is pressed again.
+            if h.physical.is_some() && !held {
+                *h = Hold::default();
+            }
+        }
+        let holds = &self.holds;
+        let axis = |neg: usize, pos: usize| match (held[neg], held[pos]) {
+            (true, true) if holds[pos].since > holds[neg].since => 1.0,
+            (true, true) => -1.0,
+            (n, p) => f32::from(u8::from(p)) - f32::from(u8::from(n)),
+        };
         let mut c = std::mem::take(&mut self.edges);
-        c.move_x = axis(self.held(LEFT, now), self.held(RIGHT, now));
-        c.move_y = axis(self.held(UP, now), self.held(DOWN, now));
+        c.move_x = axis(LEFT, RIGHT);
+        c.move_y = axis(UP, DOWN);
         c
     }
 }
@@ -234,16 +256,35 @@ impl Input {
 mod tests {
     use super::*;
     use crossterm::event::KeyEvent;
+    use std::cell::Cell;
+
+    thread_local! {
+        /// Keys the fake OS reports as down.
+        static DOWN: Cell<[bool; 4]> = const { Cell::new([false; 4]) };
+    }
+
+    fn fake_keys(code: KeyCode) -> Option<bool> {
+        direction(code).map(|d| DOWN.get()[d])
+    }
+
+    /// Input on a terminal without release events, and an OS without key state.
+    fn input() -> Input {
+        Input { keys: |_| None, ..Input::default() }
+    }
+
+    fn tap(i: &mut Input, c: char, t: Instant) {
+        i.key(KeyEvent::new(KeyCode::Char(c), KeyModifiers::NONE), t);
+    }
 
     fn press(i: &mut Input, t: Instant) {
-        i.key(KeyEvent::new(KeyCode::Char('d'), KeyModifiers::NONE), t);
+        tap(i, 'd', t);
     }
 
     #[test]
     fn repeat_stream_holds_then_releases() {
         let t0 = Instant::now();
         let ms = |n: u64| t0 + Duration::from_millis(n);
-        let mut i = Input::default();
+        let mut i = input();
         press(&mut i, t0);
         // Bridges the OS initial repeat delay.
         assert_eq!(i.controls(ms(400)).move_x, 1.0);
@@ -262,7 +303,7 @@ mod tests {
     fn menu_edges_on_quick_taps_and_throttled_repeats() {
         let t0 = Instant::now();
         let ms = |n: u64| t0 + Duration::from_millis(n);
-        let mut i = Input::default();
+        let mut i = input();
         press(&mut i, t0);
         assert!(i.controls(t0).right);
         // A second tap inside the hold window still steps the menu.
@@ -283,18 +324,17 @@ mod tests {
     fn direction_stays_held_while_space_repeats() {
         let t0 = Instant::now();
         let ms = |n: u64| t0 + Duration::from_millis(n);
-        let space = |i: &mut Input, t| i.key(KeyEvent::new(KeyCode::Char(' '), KeyModifiers::NONE), t);
-        let mut i = Input::default();
+        let mut i = input();
         press(&mut i, t0);
         for t in (450..=600).step_by(30) {
             press(&mut i, ms(t));
         }
         // Space ends the direction's repeat stream and starts its own.
-        space(&mut i, ms(620));
+        tap(&mut i, ' ', ms(620));
         assert!(i.controls(ms(620)).dash);
         let mut t = 1070;
         while t <= 2000 {
-            space(&mut i, ms(t));
+            tap(&mut i, ' ', ms(t));
             assert_eq!(i.controls(ms(t)).move_x, 1.0);
             t += 30;
         }
@@ -303,14 +343,60 @@ mod tests {
     }
 
     #[test]
-    fn opposite_press_cancels_and_release_events_are_exact() {
+    fn diagonal_holds_while_second_direction_repeats() {
         let t0 = Instant::now();
-        let mut i = Input::default();
+        let ms = |n: u64| t0 + Duration::from_millis(n);
+        let mut i = input();
+        tap(&mut i, 'w', t0);
+        for t in (450..=600).step_by(30) {
+            tap(&mut i, 'w', ms(t));
+        }
+        // D takes over the repeat stream; W stays held for as long as it lasts.
+        let mut t = 620;
+        tap(&mut i, 'd', ms(t));
+        t = 1070;
+        while t <= 2000 {
+            tap(&mut i, 'd', ms(t));
+            let c = i.controls(ms(t));
+            assert_eq!((c.move_x, c.move_y), (1.0, -1.0));
+            t += 30;
+        }
+        let c = i.controls(ms(2200));
+        assert_eq!((c.move_x, c.move_y), (0.0, 0.0));
+    }
+
+    #[test]
+    fn physical_keys_hold_through_a_dash_and_release_exactly() {
+        let t0 = Instant::now();
+        let ms = |n: u64| t0 + Duration::from_millis(n);
+        let mut i = Input { keys: fake_keys, ..Input::default() };
+        DOWN.set([false, false, false, true]);
         press(&mut i, t0);
-        i.key(KeyEvent::new(KeyCode::Char('a'), KeyModifiers::NONE), t0);
+        // A tapped Space ends every repeat stream, but D is still down.
+        tap(&mut i, ' ', ms(300));
+        assert!(i.controls(ms(300)).dash);
+        assert_eq!(i.controls(ms(5000)).move_x, 1.0);
+        DOWN.set([false; 4]);
+        assert_eq!(i.controls(ms(5001)).move_x, 0.0);
+        // A key the OS never saw down (typed over SSH) keeps the repeat heuristic.
+        tap(&mut i, 'w', ms(6000));
+        assert_eq!(i.controls(ms(6300)).move_y, -1.0);
+        assert_eq!(i.controls(ms(7000)).move_y, 0.0);
+    }
+
+    #[test]
+    fn later_opposite_wins_and_release_events_are_exact() {
+        let t0 = Instant::now();
+        let mut i = input();
+        press(&mut i, t0);
+        tap(&mut i, 'a', t0 + Duration::from_millis(1));
         assert_eq!(i.controls(t0).move_x, -1.0);
         let mut rel = KeyEvent::new(KeyCode::Char('a'), KeyModifiers::NONE);
         rel.kind = KeyEventKind::Release;
+        i.key(rel, t0);
+        // D was never released.
+        assert_eq!(i.controls(t0).move_x, 1.0);
+        rel.code = KeyCode::Char('d');
         i.key(rel, t0);
         assert_eq!(i.controls(t0).move_x, 0.0);
     }
