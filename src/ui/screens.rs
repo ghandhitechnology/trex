@@ -126,7 +126,8 @@ pub fn paused(cv: &mut Canvas, w: &World, clock: f32) {
     let items = &w.build.items;
     let per_row = ((cv.w - 24) / PITCH).max(1) as usize;
     let rows = items.len().div_ceil(per_row) as i32;
-    let pw = 120.max(items.len().min(per_row) as i32 * PITCH + 12);
+    const HINT: &str = "P RESUME   H HOME   Q QUIT";
+    let pw = (font::width(HINT) + 12).max(120).max(items.len().min(per_row) as i32 * PITCH + 12);
     // Active combos, comma separated, never splitting a name across lines.
     let mut combo_lines: Vec<String> = Vec::new();
     for k in w.build.synergies(content) {
@@ -164,7 +165,7 @@ pub fn paused(cv: &mut Canvas, w: &World, clock: f32) {
         y += font::LINE_H;
     }
     let hint = pulse(palette::HAZE, palette::FOG, clock, 0.6);
-    font::draw_centered(cv, cx, py + ph - 10, "P RESUME   Q QUIT", hint, INK);
+    font::draw_centered(cv, cx, py + ph - 10, HINT, hint, INK);
 }
 
 fn rarity_color(r: Rarity) -> Color {

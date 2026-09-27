@@ -48,6 +48,7 @@ The save lives in
 | Space or Enter | dash and fire active items | confirm |
 | 1 to 9 | take a level-up card | |
 | P or Esc | pause | back |
+| H | go home from pause, keeping the run's bones | |
 | Q | quit (Y confirms) | quit (Y confirms) |
 
 ## Development
