@@ -4,7 +4,9 @@
 //! OS key repeats after an initial delay. A direction therefore counts as held
 //! until a short window after its last event: long enough after the first press
 //! to bridge the OS repeat delay, short after a repeat. The delay and interval
-//! are learned from the repeat stream. If the terminal sends kitty-protocol
+//! are learned from the repeat stream. Pressing another key (Space to dash)
+//! ends a held direction's repeat stream, so the direction stays held for as
+//! long as that key's stream lasts. If the terminal sends kitty-protocol
 //! release events, holds become exact.
 
 use std::time::{Duration, Instant};
@@ -32,10 +34,15 @@ struct Hold {
     last: Option<Instant>,
     repeats: u32,
     first_gap: Duration,
+    /// Held when the current cover key went down.
+    covered: bool,
 }
 
 pub struct Input {
     holds: [Hold; 4],
+    /// The latest non-direction key, whose repeat stream replaced the held
+    /// directions' streams.
+    cover: Option<(KeyCode, Hold)>,
     /// Kitty keyboard protocol detected: holds end on release events.
     precise: bool,
     delay: Duration,
@@ -51,6 +58,7 @@ impl Default for Input {
     fn default() -> Self {
         Input {
             holds: [Hold::default(); 4],
+            cover: None,
             precise: false,
             delay: Duration::from_millis(450),
             interval: Duration::from_millis(40),
@@ -80,6 +88,14 @@ fn direction(code: KeyCode) -> Option<usize> {
 
 fn opposite(d: usize) -> usize {
     d ^ 1
+}
+
+/// A key counts as held until a window after its last event: the initial
+/// repeat delay after the first press, a few repeat intervals after that.
+fn live(h: &Hold, now: Instant, delay: Duration, interval: Duration) -> bool {
+    let Some(last) = h.last else { return false };
+    let window = if h.repeats == 0 { delay + DELAY_MARGIN } else { REPEAT_WINDOW.max(interval * 3) };
+    now.duration_since(last) < window
 }
 
 fn ema(old: Duration, new: Duration) -> Duration {
@@ -115,6 +131,7 @@ impl Input {
             self.press_direction(d, now);
             return;
         }
+        self.press_cover(k.code, now);
         let e = &mut self.edges;
         match k.code {
             KeyCode::Char(' ') | KeyCode::Enter => {
@@ -148,7 +165,7 @@ impl Input {
             }
         }
         if fresh {
-            self.holds[d] = Hold { last: Some(now), repeats: 0, first_gap: Duration::ZERO };
+            self.holds[d] = Hold { last: Some(now), ..Hold::default() };
             self.holds[opposite(d)] = Hold::default();
             return;
         }
@@ -170,20 +187,36 @@ impl Input {
         }
     }
 
+    fn press_cover(&mut self, code: KeyCode, now: Instant) {
+        if let Some((c, h)) = &mut self.cover
+            && *c == code
+            && live(h, now, self.delay, self.interval)
+        {
+            h.repeats += 1;
+            h.last = Some(now);
+            return;
+        }
+        let held: [bool; 4] = std::array::from_fn(|d| self.held(d, now));
+        for (h, held) in self.holds.iter_mut().zip(held) {
+            h.covered = held;
+        }
+        self.cover = Some((code, Hold { last: Some(now), ..Hold::default() }));
+    }
+
     fn held(&self, d: usize, now: Instant) -> bool {
         let h = &self.holds[d];
-        let Some(last) = h.last else { return false };
-        if self.precise {
-            return true;
+        if h.last.is_none() {
+            return false;
         }
-        let window =
-            if h.repeats == 0 { self.delay + DELAY_MARGIN } else { REPEAT_WINDOW.max(self.interval * 3) };
-        now.duration_since(last) < window
+        self.precise
+            || live(h, now, self.delay, self.interval)
+            || h.covered && self.cover.is_some_and(|(_, c)| live(&c, now, self.delay, self.interval))
     }
 
     /// Drop all holds (focus lost: releases may never arrive).
     pub fn release_all(&mut self) {
         self.holds = [Hold::default(); 4];
+        self.cover = None;
     }
 
     /// Controls for the next tick. Button edges are handed out once.
@@ -243,6 +276,29 @@ mod tests {
             })
             .count();
         assert_eq!(steps, 2);
+    }
+
+    #[test]
+    fn direction_stays_held_while_space_repeats() {
+        let t0 = Instant::now();
+        let ms = |n: u64| t0 + Duration::from_millis(n);
+        let space = |i: &mut Input, t| i.key(KeyEvent::new(KeyCode::Char(' '), KeyModifiers::NONE), t);
+        let mut i = Input::default();
+        press(&mut i, t0);
+        for t in (450..=600).step_by(30) {
+            press(&mut i, ms(t));
+        }
+        // Space ends the direction's repeat stream and starts its own.
+        space(&mut i, ms(620));
+        assert!(i.controls(ms(620)).dash);
+        let mut t = 1070;
+        while t <= 2000 {
+            space(&mut i, ms(t));
+            assert_eq!(i.controls(ms(t)).move_x, 1.0);
+            t += 30;
+        }
+        assert_eq!(i.controls(ms(2100)).move_x, 1.0);
+        assert_eq!(i.controls(ms(2200)).move_x, 0.0);
     }
 
     #[test]
